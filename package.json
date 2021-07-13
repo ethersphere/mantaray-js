@@ -1,0 +1,38 @@
+{
+  "name": "manifest-js",
+  "version": "1.0.0",
+  "description": "Mantaray data structure in JS",
+  "main": "dist/index.js",
+  "scripts": {
+    "compile:node": "webpack --progress --env target=node",
+    "dev": "npm run compile:node -- --watch --env mode=development",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "mantaray",
+    "manifest",
+    "swarm",
+    "swarm-manifest",
+    "key-value"
+  ],
+  "author": "Viktor Levente Tóth (@nugaon)",
+  "license": "BSD-3-Clause",
+  "dependencies": {
+    "js-sha3": "^0.8.0",
+    "nanoid": "^3.1.23"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.14.6",
+    "@babel/plugin-proposal-class-properties": "^7.14.5",
+    "@babel/plugin-transform-runtime": "^7.14.5",
+    "@babel/preset-env": "^7.14.7",
+    "@babel/preset-typescript": "^7.14.5",
+    "@types/terser-webpack-plugin": "^5.0.4",
+    "@types/webpack-bundle-analyzer": "^4.4.1",
+    "babel-loader": "^8.2.2",
+    "ts-node": "^10.1.0",
+    "webpack": "^5.44.0",
+    "webpack-bundle-analyzer": "^4.4.2",
+    "webpack-cli": "^4.7.2"
+  }
+}
