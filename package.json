@@ -1,5 +1,5 @@
 {
-  "name": "manifest-js",
+  "name": "mantaray-js",
   "version": "1.0.0",
   "description": "Mantaray data structure in JS",
   "main": "dist/index.js",
