@@ -1,5 +1,6 @@
-import { Bytes, MetadataMapping, NodeType, Reference, StorageHandler, StorageLoader as StorageLoader, StorageSaver as StorageSaver } from "./types"
-import { checkReference } from "./utils"
+import { keccak256 } from 'js-sha3'
+import { Bytes, MarshalVersion, MetadataMapping, NodeType, Reference, StorageHandler, StorageLoader, StorageSaver } from "./types"
+import { checkBytes, checkReference, encryptDecrypt, equalBytes, findIndexOfArray, flattenBytesArray } from "./utils"
 
 const pathSeparator = '/'
 
@@ -13,6 +14,16 @@ const nodeForkSizes = {
   metadata: 2,
   header: (): number => nodeForkSizes.nodeType + nodeForkSizes.prefixLength, // 2
   prefixMaxSize: (): number => nodeForkSizes.preReference - nodeForkSizes.header(), // 30
+} as const
+
+const nodeHeaderSizes = {
+  obfuscationKey: 32,
+  versionHash: 31,
+  /** Its value represents how long is the `entry` in bytes */
+  refBytes: 1,
+  full: (): number => {
+    return nodeHeaderSizes.obfuscationKey + nodeHeaderSizes.versionHash + nodeHeaderSizes.refBytes
+  }
 } as const
 
 class NotFoundError extends Error {
@@ -33,9 +44,21 @@ class MetadataIsTooLarge extends Error {
   }
 }
 
+class UndefinedField extends Error {
+  constructor(field: string) {
+    super(`"${field}" field is not initialized.`)
+  }
+}
+
 class PropertyIsUndefined extends Error {
   constructor() {
     super(`Property does not exist in the object`)
+  }
+}
+
+class NotImplemented extends Error {
+  constructor() {
+    super('Not Implemented')
   }
 }
 
@@ -45,18 +68,63 @@ class Fork {
    * @param node in memory structure that represents the Node
    */
   constructor(public prefix: Uint8Array, public node: MantarayNode) {}
+
+  public serialize(): Uint8Array {
+    const nodeType = this.node.getType
+    
+    const prefixLengthBytes = new Uint8Array(1)
+    prefixLengthBytes[0] = this.prefix.length
+    
+    const prefixBytes = new Uint8Array(nodeForkSizes.prefixMaxSize())
+    prefixBytes.set(this.prefix)
+    
+    console.log('hello3', this.node.getEntry)
+    let entry: Reference
+    try {
+      entry = this.node.getEntry // checked at set whether it corresponds to the valid format
+    } catch(e) {
+      entry = new Uint8Array(32) as Bytes<32>
+    }
+    
+    if(this.node.IsWithMetadataType()) throw NotImplemented
+
+    return new Uint8Array([
+      nodeType,
+      ...prefixLengthBytes,
+      ...prefixBytes,
+      ...entry
+    ])
+  }
+
+  public static deserialize(data: Uint8Array, withMetadata = false): Fork {
+    if(withMetadata) throw NotImplemented
+
+    const nodeType = data[0]
+    const prefixLength = data[1]
+
+    if ( prefixLength === 0 || prefixLength > nodeForkSizes.prefixMaxSize()) {
+      throw Error(`Invalid prefix length of fork ${prefixLength}`)
+    }
+
+    const headerSize = nodeForkSizes.header()
+    const prefix = data.slice(headerSize, headerSize + headerSize + prefixLength)
+    const node = new MantarayNode()
+    node.setEntry = data.slice(nodeForkSizes.preReference) as Bytes<32> | Bytes<64>
+    node.setType = nodeType
+
+    return new Fork(prefix, node)
+  }
 }
 
-class MantarayNode {
+export class MantarayNode {
   /** Used with NodeType type */
-  public type?: number
-  // public refBytesSize?: number
-  public obfuscationKey?: Bytes<32>
+  private type?: number
+  private obfuscationKey?: Bytes<32>
   /** reference of a loaded manifest node. if undefined, the node can be handled as `dirty` */
   private contentAddress?: Reference
   /** reference of an content that the manifest refers to */
-  public entry?: Reference
-  public metadata?: MetadataMapping
+  private entry?: Reference
+  private metadata?: MetadataMapping
   /** Forks of the manifest. Has to be initialized with `{}` on load even if there were no forks */
   public forks?: ForkMapping
 
@@ -75,6 +143,11 @@ class MantarayNode {
     this.makeDirty()
   }
 
+  public set setType(type: number) {
+    if(type > 255) throw Error(`Node type representation cannot be greater than 255`)
+
+    this.type = type
+  }  
 
   public set setObfuscationKey(obfuscationKey: Bytes<32>) {
     if(!(obfuscationKey instanceof Uint8Array)) {
@@ -118,6 +191,13 @@ class MantarayNode {
     return this.getMetadata
   }
 
+  public get getType(): number {
+    if(!this.type) throw PropertyIsUndefined
+    if(this.type > 255) throw ('Property "type" in Node is greater than 255')
+
+    return this.type
+  }
+
   /// Node type related functions
   /// dirty flag is not necessary to be set
 
@@ -149,32 +229,32 @@ class MantarayNode {
     return typeMask === NodeType.withMetadata
   }
 
-  public makeValue() {
+  private makeValue() {
     if(!this.type) this.type = NodeType.value
     this.type |= NodeType.value
   }
 
-  public makeEdge() {
+  private makeEdge() {
     if(!this.type) this.type = NodeType.edge
     this.type |= NodeType.edge
   }
 
-  public makeWithPathSeparator() {
+  private makeWithPathSeparator() {
     if(!this.type) this.type = NodeType.withPathSeparator
     this.type |= NodeType.withPathSeparator
   }
 
-  public makeWithMetadata() {
+  private makeWithMetadata() {
     if(!this.type) this.type = NodeType.withMetadata
     this.type |= NodeType.withMetadata
   }
 
-  public makeNotWithPathSeparator() {
+  private makeNotWithPathSeparator() {
     if(!this.type) throw PropertyIsUndefined
     this.type = (NodeType.mask ^ NodeType.withPathSeparator) & this.type
   }
 
-  public makeNotWithMetadata() {
+  private makeNotWithMetadata() {
     if(!this.type) throw PropertyIsUndefined
     this.type = (NodeType.mask ^ NodeType.withMetadata) & this.type
   }
@@ -196,7 +276,7 @@ class MantarayNode {
    * @param metadata 
    * @param storage 
    */
-  public add(path: Uint8Array, entry: Reference, storage: StorageHandler, metadata: MetadataMapping = {}) {    
+  public async add(path: Uint8Array, entry: Reference, storage: StorageHandler, metadata: MetadataMapping = {}) {    
     if(path.length === 0) {
       this.setEntry = entry
       if (Object.keys(metadata).length > 0) {
@@ -223,7 +303,7 @@ class MantarayNode {
       if(path.length > nodeForkSizes.prefixMaxSize()) {
         const prefix = path.slice(0, nodeForkSizes.prefixMaxSize())
         const rest = path.slice(0, nodeForkSizes.prefixMaxSize())
-        newNode.add(rest, entry, storage, metadata)
+        await newNode.add(rest, entry, storage, metadata)
         newNode.updateWithPathSeparator(prefix)
         this.forks[path[0]] = new Fork(prefix, newNode)
         this.makeEdge()
@@ -236,8 +316,10 @@ class MantarayNode {
       if(Object.keys(metadata).length > 0) {
         newNode.setMetadata = metadata
       }
+      
       newNode.makeValue() // is it related to the setEntry?
       newNode.updateWithPathSeparator(path)
+      console.log('hello2', newNode.getEntry)
       this.forks[path[0]] = new Fork(path, newNode)
       this.makeEdge()
 
@@ -267,7 +349,7 @@ class MantarayNode {
     // NOTE: special case on edge split
     newNode.updateWithPathSeparator(path)
     // add new for shared prefix
-    newNode.add(restPath, entry, storage, metadata)
+    await newNode.add(restPath, entry, storage, metadata)
     this.forks[path[0]] = new Fork(commonPath, newNode)
     this.makeEdge()
 
@@ -284,8 +366,20 @@ class MantarayNode {
     
     if (!fork) throw NotFoundError
     
-    //TODO
-    //const prefixIndex = 
+    const prefixIndex = findIndexOfArray(path, fork.prefix)
+    
+    if(prefixIndex === -1) throw NotFoundError
+
+    const rest = path.slice(fork.prefix.length)
+
+    if(rest.length === 0) {
+      // full path matched
+      delete this.forks[path[0]]
+      
+      return
+    }
+
+    fork.node.remove(rest, storage)
   }
 
   public async load(storageLoader: StorageLoader, reference: Reference | undefined): Promise<void> {
@@ -330,6 +424,109 @@ class MantarayNode {
   public makeDirty() {
     this.contentAddress = undefined
   }
+
+  public serialize() {
+    if(!this.obfuscationKey) throw new UndefinedField('obfuscationKey')
+    if(!this.forks) {
+      if(!this.entry) throw new UndefinedField('entry')
+      this.forks = {} //if there were no forks initialized it is not indended to be
+    }
+    if(!this.entry) this.entry = new Uint8Array(32) as Bytes<32> // at directoties
+
+    /// Header
+    const version: MarshalVersion = '0.2'
+    const versionBytes: Bytes<31> = serializeVersion(version)
+    const referenceLengthBytes: Bytes<1> = serializeReferenceLength(this.entry)
+
+    /// Entry is already in byte version
+
+    /// ForksIndexBytes
+    const index = new IndexBytes()
+    for(const forkIndex of Object.keys(this.forks)) {
+      index.setByte(+forkIndex)
+    }
+    const indexBytes = index.getBytes
+
+    /// Forks
+    const forkSerializations: Uint8Array[] = []
+    
+    index.foreEach(byte => {
+      const fork = this.forks![byte]
+      if(!fork) throw Error(`Fork indexing error: fork has not found under ${byte} index`)
+      forkSerializations.push(fork.serialize())
+    })
+
+    const bytes = new Uint8Array([
+      ...this.obfuscationKey,
+      ...versionBytes,
+      ...referenceLengthBytes,
+      ...this.entry,
+      ...indexBytes,
+      ...flattenBytesArray(forkSerializations)
+    ])
+
+    /// Encryption
+    /// perform XOR encryption on bytes after obfuscation key
+    encryptDecrypt(this.obfuscationKey, bytes, this.obfuscationKey.length)
+
+    return bytes
+  }
+
+  public deserialize(data: Uint8Array) {
+    const nodeHeaderSize = nodeHeaderSizes.full()
+    if (data.length < nodeHeaderSize) throw Error('serialised input too short')
+
+    this.obfuscationKey = new Uint8Array(data.slice(0, nodeHeaderSizes.obfuscationKey)) as Bytes<32>
+    // perform XOR decryption on bytes after obfuscation key
+    encryptDecrypt(this.obfuscationKey, data, this.obfuscationKey.length)
+    console.log('decrypted', data)
+
+    const versionHash = data.slice(nodeHeaderSizes.obfuscationKey, nodeHeaderSizes.obfuscationKey + nodeHeaderSizes.versionHash)
+
+    if(equalBytes(versionHash, serializeVersion('0.1'))) throw NotImplemented
+    else if (equalBytes(versionHash, serializeVersion('0.2'))) {
+        const refBytesSize = data[nodeHeaderSize - 1]
+        const entry = data.slice(nodeHeaderSize, nodeHeaderSize + refBytesSize)
+        this.setEntry = entry as Reference
+        let offset = nodeHeaderSize + refBytesSize
+        // Currently we don't persist the root nodeType when we marshal the manifest, as a result
+        // the root nodeType information is lost on Unmarshal. This causes issues when we want to
+        // perform a path 'Walk' on the root. If there is more than 1 fork, the root node type
+        // is an edge, so we will deduce this information from index byte array
+        if (data.slice(offset, offset + 32) === new Uint8Array(32)) {
+          this.type = NodeType.edge
+        }
+        this.forks = {}
+        const indexForks = new IndexBytes()
+        indexForks.setBytes = data.slice(offset, offset + 32) as Bytes<32>
+        offset += 32
+        
+        indexForks.foreEach(byte => {
+          let fork: Fork
+
+          if (data.length < offset + nodeForkSizes.nodeType) throw Error(`There is not enough size to read nodeType of fork at offset ${offset}`)
+
+          const nodeType = data.slice(offset, offset + nodeForkSizes.nodeType)
+          const nodeForkSize = nodeForkSizes.preReference + refBytesSize
+
+          if(nodeTypeIsWithMetadataType(nodeType[0])) {
+            throw NotImplemented
+          } else {
+            if (data.length < offset + nodeForkSizes.preReference + refBytesSize) {
+              throw Error(`There is not enough size to read fork at offset ${offset}`)
+            }
+
+            fork = Fork.deserialize(data.slice(offset, offset + nodeForkSize))
+          }
+
+          this.forks![byte] = fork
+          
+          offset += nodeForkSize
+        })
+    } else {
+      throw Error('Wrong mantaray version')
+    }
+  }
 }
 
 export function nodeTypeIsWithMetadataType(nodeType: number): boolean {
@@ -356,3 +553,73 @@ export function common(a: Uint8Array, b: Uint8Array): Uint8Array {
 
 	return c
 }
+
+/** 
+ * The hash length has to be 31 instead of 32 that comes from the keccak hash function
+ */
+function serializeVersion(version: MarshalVersion): Bytes<31> {
+  const versionName = 'mantaray'
+  const versionSeparator = ':'
+
+  const hash = keccak256(versionName + versionSeparator + version)
+  const hashBytes = Uint8Array.from(new TextEncoder().encode(hash))
+  
+  return hashBytes.slice(0, 31) as Bytes<31>
+}
+
+function serializeReferenceLength(entry: Reference): Bytes<1> {
+  const referenceLength = entry.length
+  if(referenceLength !== 32 && referenceLength !== 64) {
+    throw new Error(`Wrong referenceLength. It can be only 32 or 64. Got: ${referenceLength}`)
+  }
+  const bytes = new Uint8Array(1)
+  bytes[0] = referenceLength
+
+  return bytes as Bytes<1>
+}
+
+class IndexBytes {
+  private bytes: Bytes<32>
+
+  public constructor() {
+    this.bytes = new Uint8Array(32) as Bytes<32>
+  }
+
+  public get getBytes(): Bytes<32> {
+    return new Uint8Array([...this.bytes]) as Bytes<32>
+  }
+
+  public set setBytes(bytes: Bytes<32>) {
+    checkBytes<32>(bytes, 32)
+
+    this.bytes = new Uint8Array([...bytes]) as Bytes<32>
+  }
+
+  /**
+   * 
+   * @param byte is number max 255
+   */
+  public setByte(byte: number) {
+    if(byte > 255) throw Error(`IndexBytes setByte error: ${byte} is greater than 255`)  
+    this.bytes[Math.floor(byte / 8)] |= 1 << (byte % 8)
+  }
+
+  /**
+   * checks the given byte is mapped in the Bytes<32> index
+   * 
+   * @param byte is number max 255
+   */
+  public checkBytePresent(byte: number): boolean {
+    return ((this.bytes[Math.floor(byte/8)] >> (byte % 8)) & 1) > 0
+  }
+
+  /** Iterates through on the indexed byte values */
+  public foreEach(hook: (byte: number) => void) {
+    for(let i = 0; i <= 255; i++) {
+      if (this.checkBytePresent(i)) {
+        hook(i)
+      }
+    }
+  }
+}
+
