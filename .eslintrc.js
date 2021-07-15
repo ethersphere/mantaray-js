@@ -3,7 +3,7 @@ module.exports = {
   parserOptions: {
     sourceType: 'module',
     ecmaVersion: 2018,
-    project: './tsconfig.test.json'
+    project: './tsconfig.json'
   },
   env: {
     jest: true,
