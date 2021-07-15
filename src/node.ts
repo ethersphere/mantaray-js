@@ -1,6 +1,5 @@
-import { keccak256 } from 'js-sha3'
 import { Bytes, MarshalVersion, MetadataMapping, NodeType, Reference, StorageHandler, StorageLoader, StorageSaver } from "./types"
-import { checkBytes, checkReference, encryptDecrypt, equalBytes, findIndexOfArray, flattenBytesArray } from "./utils"
+import { checkBytes, checkReference, encryptDecrypt, equalBytes, findIndexOfArray, flattenBytesArray, keccak256Hash } from "./utils"
 
 const pathSeparator = '/'
 
@@ -560,9 +559,7 @@ export function common(a: Uint8Array, b: Uint8Array): Uint8Array {
 function serializeVersion(version: MarshalVersion): Bytes<31> {
   const versionName = 'mantaray'
   const versionSeparator = ':'
-
-  const hash = keccak256(versionName + versionSeparator + version)
-  const hashBytes = Uint8Array.from(new TextEncoder().encode(hash))
+  const hashBytes = keccak256Hash(versionName + versionSeparator + version)
   
   return hashBytes.slice(0, 31) as Bytes<31>
 }
