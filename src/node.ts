@@ -1,5 +1,5 @@
 import { Bytes, MarshalVersion, MetadataMapping, NodeType, Reference, StorageHandler, StorageLoader, StorageSaver } from "./types"
-import { checkBytes, checkReference, encryptDecrypt, equalBytes, findIndexOfArray, flattenBytesArray, keccak256Hash } from "./utils"
+import { checkBytes, checkReference, encryptDecrypt, equalBytes, findIndexOfArray, flattenBytesArray, fromBigEndian, keccak256Hash, toBigEndianFromUint16 } from "./utils"
 
 const pathSeparator = '/'
 
@@ -77,39 +77,81 @@ class Fork {
     const prefixBytes = new Uint8Array(nodeForkSizes.prefixMaxSize())
     prefixBytes.set(this.prefix)
     
-    console.log('hello3', this.node.getEntry)
     let entry: Reference
     try {
       entry = this.node.getEntry // checked at set whether it corresponds to the valid format
     } catch(e) {
       entry = new Uint8Array(32) as Bytes<32>
     }
-    
-    if(this.node.IsWithMetadataType()) throw NotImplemented
 
-    return new Uint8Array([
+    const data = new Uint8Array([
       nodeType,
       ...prefixLengthBytes,
       ...prefixBytes,
       ...entry
     ])
+    
+    if(this.node.IsWithMetadataType()) {
+      const jsonString = JSON.stringify(this.node.getMetadata)
+      const metadataBytes = new TextEncoder().encode(jsonString)
+
+      // const metadataByteSizeWithSize = metadataBytes.length + nodeForkSizes.metadata
+
+      // pad JSON bytes if necessary -> the encryptDecrypt handles if the data has no key length
+      // if (metadataByteSizeWithSize < nodeHeaderSizes.obfuscationKey) {
+      //   const paddingLength = nodeHeaderSizes.obfuscationKey - metadataByteSizeWithSize
+      //   const padding
+      // }
+
+      const metadataBytesSize = toBigEndianFromUint16(metadataBytes.length)
+
+      return new Uint8Array([
+        ...data,
+        ...metadataBytesSize,
+        ...metadataBytes
+      ])
+    }
+
+    return data
   }
 
-  public static deserialize(data: Uint8Array, withMetadata = false): Fork {
-    if(withMetadata) throw NotImplemented
-
+  public static deserialize(
+    data: Uint8Array, 
+    options?: { 
+      withMetadata?: { 
+        refBytesSize: number, 
+        metadataByteSize: number 
+      } 
+    }): Fork {
     const nodeType = data[0]
     const prefixLength = data[1]
 
     if ( prefixLength === 0 || prefixLength > nodeForkSizes.prefixMaxSize()) {
-      throw Error(`Invalid prefix length of fork ${prefixLength}`)
+      throw Error(`Prefix length of fork is greater than ${nodeForkSizes.prefixMaxSize()}. Got: ${prefixLength}`)
     }
 
     const headerSize = nodeForkSizes.header()
     const prefix = data.slice(headerSize, headerSize + headerSize + prefixLength)
     const node = new MantarayNode()
-    node.setEntry = data.slice(nodeForkSizes.preReference) as Bytes<32> | Bytes<64>
-    node.setType = nodeType
+
+    const withMetadata = options?.withMetadata
+    if(withMetadata) {
+      const { refBytesSize, metadataByteSize } = withMetadata
+      
+      if(metadataByteSize > 0) {
+        node.setEntry = data.slice(nodeForkSizes.preReference, nodeForkSizes.preReference + refBytesSize) as Bytes<32> | Bytes<64>
+
+        const startMetadata = nodeForkSizes.preReference + refBytesSize + nodeForkSizes.metadata
+        const metadataBytes = data.slice(startMetadata, startMetadata + metadataByteSize)
+        const metadata: MetadataMapping = {}
+        
+        const jsonString = new TextDecoder().decode(metadataBytes)
+        node.setMetadata = JSON.parse(jsonString)
+      }
+    } else {
+      node.setEntry = data.slice(nodeForkSizes.preReference) as Bytes<32> | Bytes<64>
+      node.setType = nodeType
+    }
 
     return new Fork(prefix, node)
   }
@@ -185,9 +227,9 @@ export class MantarayNode {
   }
 
   public get getMetadata(): MetadataMapping{
-    if(!this.getMetadata) throw PropertyIsUndefined
+    if(!this.metadata) throw PropertyIsUndefined
 
-    return this.getMetadata
+    return this.metadata
   }
 
   public get getType(): number {
@@ -318,7 +360,6 @@ export class MantarayNode {
       
       newNode.makeValue() // is it related to the setEntry?
       newNode.updateWithPathSeparator(path)
-      console.log('hello2', newNode.getEntry)
       this.forks[path[0]] = new Fork(path, newNode)
       this.makeEdge()
 
@@ -478,7 +519,6 @@ export class MantarayNode {
     this.obfuscationKey = new Uint8Array(data.slice(0, nodeHeaderSizes.obfuscationKey)) as Bytes<32>
     // perform XOR decryption on bytes after obfuscation key
     encryptDecrypt(this.obfuscationKey, data, this.obfuscationKey.length)
-    console.log('decrypted', data)
 
     const versionHash = data.slice(nodeHeaderSizes.obfuscationKey, nodeHeaderSizes.obfuscationKey + nodeHeaderSizes.versionHash)
 
@@ -488,16 +528,17 @@ export class MantarayNode {
         const entry = data.slice(nodeHeaderSize, nodeHeaderSize + refBytesSize)
         this.setEntry = entry as Reference
         let offset = nodeHeaderSize + refBytesSize
+        const indexBytes = data.slice(offset, offset + 32) as Bytes<32>
         // Currently we don't persist the root nodeType when we marshal the manifest, as a result
         // the root nodeType information is lost on Unmarshal. This causes issues when we want to
         // perform a path 'Walk' on the root. If there is more than 1 fork, the root node type
         // is an edge, so we will deduce this information from index byte array
-        if (data.slice(offset, offset + 32) === new Uint8Array(32)) {
+        if (equalBytes(indexBytes, new Uint8Array(32))) {
           this.type = NodeType.edge
         }
         this.forks = {}
         const indexForks = new IndexBytes()
-        indexForks.setBytes = data.slice(offset, offset + 32) as Bytes<32>
+        indexForks.setBytes = indexBytes
         offset += 32
         
         indexForks.foreEach(byte => {
@@ -506,10 +547,17 @@ export class MantarayNode {
           if (data.length < offset + nodeForkSizes.nodeType) throw Error(`There is not enough size to read nodeType of fork at offset ${offset}`)
 
           const nodeType = data.slice(offset, offset + nodeForkSizes.nodeType)
-          const nodeForkSize = nodeForkSizes.preReference + refBytesSize
+          let nodeForkSize = nodeForkSizes.preReference + refBytesSize
 
           if(nodeTypeIsWithMetadataType(nodeType[0])) {
-            throw NotImplemented
+            if (data.length < offset + nodeForkSizes.preReference + refBytesSize + nodeForkSizes.metadata) {
+              throw Error(`Not enough bytes for metadata node fork at byte ${byte}`)
+            }
+
+            const metadataByteSize = fromBigEndian(data.slice(offset + nodeForkSize, offset + nodeForkSize + nodeForkSizes.metadata))
+            nodeForkSize += nodeForkSizes.metadata + metadataByteSize
+
+            fork = Fork.deserialize(data.slice(offset, offset + nodeForkSize), { withMetadata: {refBytesSize, metadataByteSize}})
           } else {
             if (data.length < offset + nodeForkSizes.preReference + refBytesSize) {
               throw Error(`There is not enough size to read fork at offset ${offset}`)
@@ -529,7 +577,7 @@ export class MantarayNode {
 }
 
 export function nodeTypeIsWithMetadataType(nodeType: number): boolean {
-	return nodeType === NodeType.withMetadata
+	return (nodeType & NodeType.withMetadata) === NodeType.withMetadata
 }
 
 /**
