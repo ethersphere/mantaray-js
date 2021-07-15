@@ -13,7 +13,7 @@ export enum NodeType {
   edge = 4,
   withPathSeparator = 8,
   withMetadata = 16,
-  mask = 255
+  mask = 255,
 }
 
 export type MetadataMapping = { [key: string]: string }
