@@ -299,7 +299,7 @@ export class MantarayNode {
    * @param metadata 
    * @param storage 
    */
-  public async add(path: Uint8Array, entry: Reference, storage: StorageHandler, metadata: MetadataMapping = {}) {    
+  public async addFork(path: Uint8Array, entry: Reference, storage: StorageHandler, metadata: MetadataMapping = {}) {    
     if(path.length === 0) {
       this.setEntry = entry
       if (Object.keys(metadata).length > 0) {
@@ -326,7 +326,7 @@ export class MantarayNode {
       if(path.length > nodeForkSizes.prefixMaxSize()) {
         const prefix = path.slice(0, nodeForkSizes.prefixMaxSize())
         const rest = path.slice(0, nodeForkSizes.prefixMaxSize())
-        await newNode.add(rest, entry, storage, metadata)
+        await newNode.addFork(rest, entry, storage, metadata)
         newNode.updateWithPathSeparator(prefix)
         this.forks[path[0]] = new MantarayFork(prefix, newNode)
         this.makeEdge()
@@ -371,7 +371,7 @@ export class MantarayNode {
     // NOTE: special case on edge split
     newNode.updateWithPathSeparator(path)
     // add new for shared prefix
-    await newNode.add(restPath, entry, storage, metadata)
+    await newNode.addFork(restPath, entry, storage, metadata)
     this.forks[path[0]] = new MantarayFork(commonPath, newNode)
     this.makeEdge()
 
