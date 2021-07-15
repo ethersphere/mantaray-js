@@ -3,7 +3,7 @@ import { checkBytes, checkReference, encryptDecrypt, equalBytes, findIndexOfArra
 
 const pathSeparator = '/'
 
-type ForkMapping = { [key: number]: Fork }
+type ForkMapping = { [key: number]: MantarayFork }
 
 const nodeForkSizes = {
   nodeType: 1,
@@ -61,7 +61,7 @@ class NotImplemented extends Error {
   }
 }
 
-class Fork {
+class MantarayFork {
   /**
    * @param prefix the non-branching part of the subpath
    * @param node in memory structure that represents the Node
@@ -95,13 +95,7 @@ class Fork {
       const jsonString = JSON.stringify(this.node.getMetadata)
       const metadataBytes = new TextEncoder().encode(jsonString)
 
-      // const metadataByteSizeWithSize = metadataBytes.length + nodeForkSizes.metadata
-
       // pad JSON bytes if necessary -> the encryptDecrypt handles if the data has no key length
-      // if (metadataByteSizeWithSize < nodeHeaderSizes.obfuscationKey) {
-      //   const paddingLength = nodeHeaderSizes.obfuscationKey - metadataByteSizeWithSize
-      //   const padding
-      // }
 
       const metadataBytesSize = toBigEndianFromUint16(metadataBytes.length)
 
@@ -122,7 +116,7 @@ class Fork {
         refBytesSize: number, 
         metadataByteSize: number 
       } 
-    }): Fork {
+    }): MantarayFork {
     const nodeType = data[0]
     const prefixLength = data[1]
 
@@ -143,7 +137,6 @@ class Fork {
 
         const startMetadata = nodeForkSizes.preReference + refBytesSize + nodeForkSizes.metadata
         const metadataBytes = data.slice(startMetadata, startMetadata + metadataByteSize)
-        const metadata: MetadataMapping = {}
         
         const jsonString = new TextDecoder().decode(metadataBytes)
         node.setMetadata = JSON.parse(jsonString)
@@ -153,7 +146,7 @@ class Fork {
       node.setType = nodeType
     }
 
-    return new Fork(prefix, node)
+    return new MantarayFork(prefix, node)
   }
 }
 
@@ -346,7 +339,7 @@ export class MantarayNode {
         const rest = path.slice(0, nodeForkSizes.prefixMaxSize())
         await newNode.add(rest, entry, storage, metadata)
         newNode.updateWithPathSeparator(prefix)
-        this.forks[path[0]] = new Fork(prefix, newNode)
+        this.forks[path[0]] = new MantarayFork(prefix, newNode)
         this.makeEdge()
 
         return
@@ -360,7 +353,7 @@ export class MantarayNode {
       
       newNode.makeValue() // is it related to the setEntry?
       newNode.updateWithPathSeparator(path)
-      this.forks[path[0]] = new Fork(path, newNode)
+      this.forks[path[0]] = new MantarayFork(path, newNode)
       this.makeEdge()
 
       return
@@ -378,7 +371,7 @@ export class MantarayNode {
       }
       fork.node.updateWithPathSeparator(restPath)
       newNode.forks = {} //TODO setter
-      newNode.forks[restPath[0]] = new Fork(restPath, fork.node)
+      newNode.forks[restPath[0]] = new MantarayFork(restPath, fork.node)
       newNode.makeEdge()
       // if common path is full path new node is value type
       if (path.length === commonPath.length) {
@@ -390,7 +383,7 @@ export class MantarayNode {
     newNode.updateWithPathSeparator(path)
     // add new for shared prefix
     await newNode.add(restPath, entry, storage, metadata)
-    this.forks[path[0]] = new Fork(commonPath, newNode)
+    this.forks[path[0]] = new MantarayFork(commonPath, newNode)
     this.makeEdge()
 
     this.makeDirty()
@@ -542,7 +535,7 @@ export class MantarayNode {
         offset += 32
         
         indexForks.foreEach(byte => {
-          let fork: Fork
+          let fork: MantarayFork
 
           if (data.length < offset + nodeForkSizes.nodeType) throw Error(`There is not enough size to read nodeType of fork at offset ${offset}`)
 
@@ -557,13 +550,13 @@ export class MantarayNode {
             const metadataByteSize = fromBigEndian(data.slice(offset + nodeForkSize, offset + nodeForkSize + nodeForkSizes.metadata))
             nodeForkSize += nodeForkSizes.metadata + metadataByteSize
 
-            fork = Fork.deserialize(data.slice(offset, offset + nodeForkSize), { withMetadata: {refBytesSize, metadataByteSize}})
+            fork = MantarayFork.deserialize(data.slice(offset, offset + nodeForkSize), { withMetadata: {refBytesSize, metadataByteSize}})
           } else {
             if (data.length < offset + nodeForkSizes.preReference + refBytesSize) {
               throw Error(`There is not enough size to read fork at offset ${offset}`)
             }
 
-            fork = Fork.deserialize(data.slice(offset, offset + nodeForkSize))
+            fork = MantarayFork.deserialize(data.slice(offset, offset + nodeForkSize))
           }
 
           this.forks![byte] = fork
