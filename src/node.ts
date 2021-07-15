@@ -1,5 +1,5 @@
 import { Bytes, MarshalVersion, MetadataMapping, NodeType, Reference, StorageHandler, StorageLoader, StorageSaver } from "./types"
-import { checkBytes, checkReference, encryptDecrypt, equalBytes, findIndexOfArray, flattenBytesArray, fromBigEndian, keccak256Hash, toBigEndianFromUint16 } from "./utils"
+import { checkReference, common, encryptDecrypt, equalBytes, findIndexOfArray, flattenBytesArray, fromBigEndian, IndexBytes, keccak256Hash, toBigEndianFromUint16 } from "./utils"
 
 const pathSeparator = '/'
 
@@ -37,12 +37,6 @@ class EmptyPathError extends Error {
   }
 }
 
-class MetadataIsTooLarge extends Error {
-  constructor() {
-    super('Metadata is too large')
-  }
-}
-
 class UndefinedField extends Error {
   constructor(field: string) {
     super(`"${field}" field is not initialized.`)
@@ -61,7 +55,7 @@ class NotImplemented extends Error {
   }
 }
 
-class MantarayFork {
+export class MantarayFork {
   /**
    * @param prefix the non-branching part of the subpath
    * @param node in memory structure that represents the Node
@@ -286,11 +280,6 @@ export class MantarayNode {
   private makeNotWithPathSeparator() {
     if(!this.type) throw PropertyIsUndefined
     this.type = (NodeType.mask ^ NodeType.withPathSeparator) & this.type
-  }
-
-  private makeNotWithMetadata() {
-    if(!this.type) throw PropertyIsUndefined
-    this.type = (NodeType.mask ^ NodeType.withMetadata) & this.type
   }
 
   private updateWithPathSeparator(path: Uint8Array) {
@@ -573,27 +562,6 @@ export function nodeTypeIsWithMetadataType(nodeType: number): boolean {
 	return (nodeType & NodeType.withMetadata) === NodeType.withMetadata
 }
 
-/**
- * 
- * @returns MantarayNode which only has
- */
-export function initNodeByRef(ref: Reference): MantarayNode {
-	const node = new MantarayNode()
-  node.setContentAddress = ref
-
-  return node
-}
-
-export function common(a: Uint8Array, b: Uint8Array): Uint8Array {
-	let c = new Uint8Array(0)
-  
-  for (let i = 0; i < a.length && i < b.length && a[i] == b[i]; i++) {
-		c = new Uint8Array([...c, a[i] ])
-	}
-
-	return c
-}
-
 /** 
  * The hash length has to be 31 instead of 32 that comes from the keccak hash function
  */
@@ -615,49 +583,3 @@ function serializeReferenceLength(entry: Reference): Bytes<1> {
 
   return bytes as Bytes<1>
 }
-
-class IndexBytes {
-  private bytes: Bytes<32>
-
-  public constructor() {
-    this.bytes = new Uint8Array(32) as Bytes<32>
-  }
-
-  public get getBytes(): Bytes<32> {
-    return new Uint8Array([...this.bytes]) as Bytes<32>
-  }
-
-  public set setBytes(bytes: Bytes<32>) {
-    checkBytes<32>(bytes, 32)
-
-    this.bytes = new Uint8Array([...bytes]) as Bytes<32>
-  }
-
-  /**
-   * 
-   * @param byte is number max 255
-   */
-  public setByte(byte: number) {
-    if(byte > 255) throw Error(`IndexBytes setByte error: ${byte} is greater than 255`)  
-    this.bytes[Math.floor(byte / 8)] |= 1 << (byte % 8)
-  }
-
-  /**
-   * checks the given byte is mapped in the Bytes<32> index
-   * 
-   * @param byte is number max 255
-   */
-  public checkBytePresent(byte: number): boolean {
-    return ((this.bytes[Math.floor(byte/8)] >> (byte % 8)) & 1) > 0
-  }
-
-  /** Iterates through on the indexed byte values */
-  public foreEach(hook: (byte: number) => void) {
-    for(let i = 0; i <= 255; i++) {
-      if (this.checkBytePresent(i)) {
-        hook(i)
-      }
-    }
-  }
-}
-

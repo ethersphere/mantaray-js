@@ -1,5 +1,6 @@
 import type { Message } from 'js-sha3';
 import { keccak256 } from 'js-sha3';
+import { nanoid } from 'nanoid';
 import { Bytes, Reference } from "./types";
 
 export function checkReference(ref: Reference): void | never {
@@ -116,4 +117,64 @@ export function toBigEndianFromUint16(value: number): Bytes<2> {
   if(value > maxValue) throw Error(`toBigEndianFromUint16 got greater value then ${maxValue}: ${value} `)
 
   return new Uint8Array([value >> 8, value]) as Bytes<2>
+}
+
+export function gen32Bytes(): Bytes<32> {
+  return new TextEncoder().encode(nanoid(32)) as Bytes<32>
+}
+
+/** It returns the common bytes of the two given byte arrays until the first byte difference */
+export function common(a: Uint8Array, b: Uint8Array): Uint8Array {
+	let c = new Uint8Array(0)
+  
+  for (let i = 0; i < a.length && i < b.length && a[i] == b[i]; i++) {
+		c = new Uint8Array([...c, a[i] ])
+	}
+
+	return c
+}
+
+export class IndexBytes {
+  private bytes: Bytes<32>
+
+  public constructor() {
+    this.bytes = new Uint8Array(32) as Bytes<32>
+  }
+
+  public get getBytes(): Bytes<32> {
+    return new Uint8Array([...this.bytes]) as Bytes<32>
+  }
+
+  public set setBytes(bytes: Bytes<32>) {
+    checkBytes<32>(bytes, 32)
+
+    this.bytes = new Uint8Array([...bytes]) as Bytes<32>
+  }
+
+  /**
+   * 
+   * @param byte is number max 255
+   */
+  public setByte(byte: number) {
+    if(byte > 255) throw Error(`IndexBytes setByte error: ${byte} is greater than 255`)  
+    this.bytes[Math.floor(byte / 8)] |= 1 << (byte % 8)
+  }
+
+  /**
+   * checks the given byte is mapped in the Bytes<32> index
+   * 
+   * @param byte is number max 255
+   */
+  public checkBytePresent(byte: number): boolean {
+    return ((this.bytes[Math.floor(byte/8)] >> (byte % 8)) & 1) > 0
+  }
+
+  /** Iterates through on the indexed byte values */
+  public foreEach(hook: (byte: number) => void) {
+    for(let i = 0; i <= 255; i++) {
+      if (this.checkBytePresent(i)) {
+        hook(i)
+      }
+    }
+  }
 }
