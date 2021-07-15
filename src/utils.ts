@@ -95,3 +95,25 @@ export function keccak256Hash(...messages: Message[]): Bytes<32> {
 
   return Uint8Array.from(hasher.digest()) as Bytes<32>
 }
+
+/** Tested only for Uint16 BigEndian */
+export function fromBigEndian(bytes: Uint8Array): number {
+  if(bytes.length === 0) throw Error('fromBigEndian got 0 length bytes')
+  const numbers: number[] = []
+  const lastIndex = bytes.length - 1
+
+  for(let i = 0; i < bytes.length; i++) {
+    numbers.push(bytes[lastIndex - i] << (8 * i))
+  }
+
+  return numbers.reduce((bigEndian, num) => bigEndian |= num)
+}
+
+/** Tested only with Uint16 BigEndian */
+export function toBigEndianFromUint16(value: number): Bytes<2> {
+  if(value < 0) throw Error(`toBigEndianFromUint16 got lesser than 0 value: ${value}`)
+  const maxValue = (1 << 16) - 1 
+  if(value > maxValue) throw Error(`toBigEndianFromUint16 got greater value then ${maxValue}: ${value} `)
+
+  return new Uint8Array([value >> 8, value]) as Bytes<2>
+}
