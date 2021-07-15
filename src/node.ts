@@ -359,7 +359,7 @@ export class MantarayNode {
         newNode.setObfuscationKey = this.obfuscationKey
       }
       fork.node.updateWithPathSeparator(restPath)
-      newNode.forks = {} //TODO setter
+      newNode.forks = {}
       newNode.forks[restPath[0]] = new MantarayFork(restPath, fork.node)
       newNode.makeEdge()
       // if common path is full path new node is value type
@@ -379,7 +379,7 @@ export class MantarayNode {
   }
 
   /** removes a path from the node */
-  public remove(path: Uint8Array, storage: StorageHandler) {
+  public remove(path: Uint8Array, storage: StorageHandler): void {
     if (path.length === 0) throw EmptyPathError
 
     if(!this.forks) throw Error(`Fork mapping is not defined in the manifest`)
@@ -408,12 +408,15 @@ export class MantarayNode {
     if(!reference) throw Error('Reference is undefined at manifest load')
 
     const data = await storageLoader(reference)
-    //TODO deserialize
+    this.deserialize(data)
     
     this.makeDirty()
   }
 
-  /** Saves dirty flagged ManifestNode and its forks recursively */
+  /** 
+   * Saves dirty flagged ManifestNode and its forks recursively 
+   * @returns Reference of the top manifest node.
+   */
   public async save(storageSaver: StorageSaver): Promise<Reference> {
     if(!this.isDirty()) {
       if (!this.contentAddress) throw Error('There is no content address of a manifest node that is not necessary to be saved.')
@@ -431,10 +434,10 @@ export class MantarayNode {
     await Promise.all(savePromises)
 
     // save the actual manifest as well
-    const data = new Uint8Array(21) //TODO serialize
+    const data = this.serialize()
     const reference = await storageSaver(data)
     
-    this.makeDirty()
+    this.setContentAddress = reference
 
     return reference
   }
@@ -443,11 +446,11 @@ export class MantarayNode {
     return this.contentAddress === undefined
   }
 
-  public makeDirty() {
+  public makeDirty(): void {
     this.contentAddress = undefined
   }
 
-  public serialize() {
+  public serialize(): Uint8Array {
     if(!this.obfuscationKey) throw new UndefinedField('obfuscationKey')
     if(!this.forks) {
       if(!this.entry) throw new UndefinedField('entry')
@@ -494,7 +497,7 @@ export class MantarayNode {
     return bytes
   }
 
-  public deserialize(data: Uint8Array) {
+  public deserialize(data: Uint8Array): void {
     const nodeHeaderSize = nodeHeaderSizes.full()
     if (data.length < nodeHeaderSize) throw Error('serialised input too short')
 
