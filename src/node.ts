@@ -1,13 +1,4 @@
-import {
-  Bytes,
-  MarshalVersion,
-  MetadataMapping,
-  NodeType,
-  Reference,
-  StorageHandler,
-  StorageLoader,
-  StorageSaver,
-} from './types'
+import { Bytes, MarshalVersion, MetadataMapping, NodeType, Reference, StorageLoader, StorageSaver } from './types'
 import {
   checkReference,
   common,
@@ -238,7 +229,7 @@ export class MantarayNode {
   }
 
   public get getType(): number {
-    if (!this.type) throw PropertyIsUndefined
+    if (this.type === undefined) throw PropertyIsUndefined
 
     if (this.type > 255) throw 'Property "type" in Node is greater than 255'
 
@@ -247,11 +238,6 @@ export class MantarayNode {
 
   /// Node type related functions
   /// dirty flag is not necessary to be set
-
-  /** Used at tests, because root mantaray node loses its type after serialization */
-  public removeType(): void {
-    this.type = undefined
-  }
 
   public isValueType(): boolean {
     if (!this.type) throw PropertyIsUndefined
@@ -323,12 +309,7 @@ export class MantarayNode {
    * @param metadata
    * @param storage
    */
-  public async addFork(
-    path: Uint8Array,
-    entry: Reference,
-    storage: StorageHandler,
-    metadata: MetadataMapping = {},
-  ): Promise<void> {
+  public async addFork(path: Uint8Array, entry: Reference, metadata: MetadataMapping = {}): Promise<void> {
     if (path.length === 0) {
       this.setEntry = entry
 
@@ -356,7 +337,7 @@ export class MantarayNode {
       if (path.length > nodeForkSizes.prefixMaxSize()) {
         const prefix = path.slice(0, nodeForkSizes.prefixMaxSize())
         const rest = path.slice(0, nodeForkSizes.prefixMaxSize())
-        await newNode.addFork(rest, entry, storage, metadata)
+        newNode.addFork(rest, entry, metadata)
         newNode.updateWithPathSeparator(prefix)
         this.forks[path[0]] = new MantarayFork(prefix, newNode)
         this.makeEdge()
@@ -374,6 +355,7 @@ export class MantarayNode {
       newNode.updateWithPathSeparator(path)
       this.forks[path[0]] = new MantarayFork(path, newNode)
       this.makeEdge()
+      this.makeNotWithPathSeparator()
 
       return
     }
@@ -385,10 +367,8 @@ export class MantarayNode {
     if (restPath.length > 0) {
       // move current common prefix node
       newNode = new MantarayNode()
+      newNode.setObfuscationKey = this.obfuscationKey || (new Uint8Array(32) as Bytes<32>)
 
-      if (this.obfuscationKey) {
-        newNode.setObfuscationKey = this.obfuscationKey
-      }
       fork.node.updateWithPathSeparator(restPath)
       newNode.forks = {}
       newNode.forks[restPath[0]] = new MantarayFork(restPath, fork.node)
@@ -403,7 +383,7 @@ export class MantarayNode {
     // NOTE: special case on edge split
     newNode.updateWithPathSeparator(path)
     // add new for shared prefix
-    await newNode.addFork(restPath, entry, storage, metadata)
+    newNode.addFork(path.slice(common.length > 0 ? common.length - 1 : 0), entry, metadata)
     this.forks[path[0]] = new MantarayFork(commonPath, newNode)
     this.makeEdge()
 
@@ -411,7 +391,7 @@ export class MantarayNode {
   }
 
   /** removes a path from the node */
-  public removePath(path: Uint8Array, storage: StorageHandler): void {
+  public removePath(path: Uint8Array): void {
     if (path.length === 0) throw EmptyPathError
 
     if (!this.forks) throw Error(`Fork mapping is not defined in the manifest`)
@@ -433,16 +413,16 @@ export class MantarayNode {
       return
     }
 
-    fork.node.removePath(rest, storage)
+    fork.node.removePath(rest)
   }
 
-  public async load(storageLoader: StorageLoader, reference: Reference | undefined): Promise<void> {
+  public async load(storageLoader: StorageLoader, reference: Reference): Promise<void> {
     if (!reference) throw Error('Reference is undefined at manifest load')
 
     const data = await storageLoader(reference)
     this.deserialize(data)
 
-    this.makeDirty()
+    this.setContentAddress = reference
   }
 
   /**
@@ -450,13 +430,7 @@ export class MantarayNode {
    * @returns Reference of the top manifest node.
    */
   public async save(storageSaver: StorageSaver): Promise<Reference> {
-    if (!this.isDirty()) {
-      if (!this.contentAddress) {
-        throw Error('There is no content address of a manifest node that is not necessary to be saved.')
-      }
-
-      return this.contentAddress
-    }
+    if (this.contentAddress) return this.contentAddress
 
     // save forks first recursively
     const savePromises: Promise<Reference>[] = []
@@ -465,7 +439,6 @@ export class MantarayNode {
     for (const fork of Object.values(this.forks)) {
       savePromises.push(fork.node.save(storageSaver))
     }
-    await Promise.all(savePromises)
 
     // save the actual manifest as well
     const data = this.serialize()
@@ -485,7 +458,7 @@ export class MantarayNode {
   }
 
   public serialize(): Uint8Array {
-    if (!this.obfuscationKey) throw new UndefinedField('obfuscationKey')
+    if (!this.obfuscationKey) this.setObfuscationKey = new Uint8Array(32) as Bytes<32>
 
     if (!this.forks) {
       if (!this.entry) throw new UndefinedField('entry')
@@ -519,7 +492,7 @@ export class MantarayNode {
     })
 
     const bytes = new Uint8Array([
-      ...this.obfuscationKey,
+      ...this.obfuscationKey!,
       ...versionBytes,
       ...referenceLengthBytes,
       ...this.entry,
@@ -529,7 +502,7 @@ export class MantarayNode {
 
     /// Encryption
     /// perform XOR encryption on bytes after obfuscation key
-    encryptDecrypt(this.obfuscationKey, bytes, this.obfuscationKey.length)
+    encryptDecrypt(this.obfuscationKey!, bytes, this.obfuscationKey!.length)
 
     return bytes
   }
@@ -560,7 +533,7 @@ export class MantarayNode {
       // the root nodeType information is lost on Unmarshal. This causes issues when we want to
       // perform a path 'Walk' on the root. If there is more than 1 fork, the root node type
       // is an edge, so we will deduce this information from index byte array
-      if (equalBytes(indexBytes, new Uint8Array(32))) {
+      if (!equalBytes(indexBytes, new Uint8Array(32))) {
         this.type = NodeType.edge
       }
       this.forks = {}
@@ -634,4 +607,23 @@ function serializeReferenceLength(entry: Reference): Bytes<1> {
   bytes[0] = referenceLength
 
   return bytes as Bytes<1>
+}
+
+/** loads forks of node in the next level */
+export async function loadForkNodes(storageLoader: StorageLoader, node: MantarayNode): Promise<void> {
+  if (!node.forks) return
+
+  for (const fork of Object.values(node.forks)) {
+    await fork.node.load(storageLoader, fork.node.getEntry)
+  }
+}
+
+/** loads all nodes recursively */
+export async function loadAllNodes(storageLoader: StorageLoader, node: MantarayNode): Promise<void> {
+  if (!node.forks) return
+
+  for (const fork of Object.values(node.forks)) {
+    await fork.node.load(storageLoader, fork.node.getEntry)
+    await loadAllNodes(storageLoader, fork.node)
+  }
 }
