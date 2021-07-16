@@ -6,7 +6,7 @@ import {
   Reference,
   StorageHandler,
   StorageLoader,
-  StorageSaver,
+  StorageSaver
 } from './types'
 import {
   checkReference,
@@ -18,7 +18,7 @@ import {
   fromBigEndian,
   IndexBytes,
   keccak256Hash,
-  toBigEndianFromUint16,
+  toBigEndianFromUint16
 } from './utils'
 
 const pathSeparator = '/'
@@ -116,6 +116,7 @@ export class MantarayFork {
 
   public static deserialize(
     data: Uint8Array,
+    obfuscationKey: Bytes<32>,
     options?: {
       withMetadata?: {
         refBytesSize: number
@@ -131,8 +132,9 @@ export class MantarayFork {
     }
 
     const headerSize = nodeForkSizes.header()
-    const prefix = data.slice(headerSize, headerSize + headerSize + prefixLength)
+    const prefix = data.slice(headerSize, headerSize + prefixLength)
     const node = new MantarayNode()
+    node.setObfuscationKey = obfuscationKey
 
     const withMetadata = options?.withMetadata
 
@@ -152,8 +154,8 @@ export class MantarayFork {
       }
     } else {
       node.setEntry = data.slice(nodeForkSizes.preReference) as Bytes<32> | Bytes<64>
-      node.setType = nodeType
     }
+    node.setType = nodeType
 
     return new MantarayFork(prefix, node)
   }
@@ -245,6 +247,11 @@ export class MantarayNode {
 
   /// Node type related functions
   /// dirty flag is not necessary to be set
+
+  /** Used at tests, because root mantaray node loses its type after serialization */
+  public removeType(): void {
+    this.type = undefined
+  }
 
   public isValueType(): boolean {
     if (!this.type) throw PropertyIsUndefined
@@ -404,7 +411,7 @@ export class MantarayNode {
   }
 
   /** removes a path from the node */
-  public remove(path: Uint8Array, storage: StorageHandler): void {
+  public removePath(path: Uint8Array, storage: StorageHandler): void {
     if (path.length === 0) throw EmptyPathError
 
     if (!this.forks) throw Error(`Fork mapping is not defined in the manifest`)
@@ -426,7 +433,7 @@ export class MantarayNode {
       return
     }
 
-    fork.node.remove(rest, storage)
+    fork.node.removePath(rest, storage)
   }
 
   public async load(storageLoader: StorageLoader, reference: Reference | undefined): Promise<void> {
@@ -581,7 +588,7 @@ export class MantarayNode {
           )
           nodeForkSize += nodeForkSizes.metadata + metadataByteSize
 
-          fork = MantarayFork.deserialize(data.slice(offset, offset + nodeForkSize), {
+          fork = MantarayFork.deserialize(data.slice(offset, offset + nodeForkSize), this.obfuscationKey!, {
             withMetadata: { refBytesSize, metadataByteSize },
           })
         } else {
@@ -589,7 +596,7 @@ export class MantarayNode {
             throw Error(`There is not enough size to read fork at offset ${offset}`)
           }
 
-          fork = MantarayFork.deserialize(data.slice(offset, offset + nodeForkSize))
+          fork = MantarayFork.deserialize(data.slice(offset, offset + nodeForkSize), this.obfuscationKey!)
         }
 
         this.forks![byte] = fork
