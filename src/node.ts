@@ -82,12 +82,9 @@ export class MantarayFork {
     const prefixBytes = new Uint8Array(nodeForkSizes.prefixMaxSize())
     prefixBytes.set(this.prefix)
 
-    let entry: Reference
-    try {
-      entry = this.node.getEntry // checked at set whether it corresponds to the valid format
-    } catch (e) {
-      entry = new Uint8Array(32) as Bytes<32>
-    }
+    const entry: Reference | undefined = this.node.getContentAddress
+
+    if (!entry) throw Error('cannot serialize MantarayFork because it does not have contentAddress')
 
     const data = new Uint8Array([nodeType, ...prefixLengthBytes, ...prefixBytes, ...entry])
 
@@ -216,9 +213,7 @@ export class MantarayNode {
     return this.entry
   }
 
-  public get getContentAddress(): Reference {
-    if (!this.contentAddress) throw PropertyIsUndefined
-
+  public get getContentAddress(): Reference | undefined {
     return this.contentAddress
   }
 
@@ -309,7 +304,7 @@ export class MantarayNode {
    * @param metadata
    * @param storage
    */
-  public async addFork(path: Uint8Array, entry: Reference, metadata: MetadataMapping = {}): Promise<void> {
+  public addFork(path: Uint8Array, entry: Reference, metadata: MetadataMapping = {}): void {
     if (path.length === 0) {
       this.setEntry = entry
 
@@ -439,6 +434,7 @@ export class MantarayNode {
     for (const fork of Object.values(this.forks)) {
       savePromises.push(fork.node.save(storageSaver))
     }
+    await Promise.all(savePromises)
 
     // save the actual manifest as well
     const data = this.serialize()
