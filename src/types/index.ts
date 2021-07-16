@@ -6,7 +6,7 @@ export interface Bytes<Length extends number> extends Uint8Array {
   readonly length: Length
 }
 
-export type Reference = Bytes<32> | Bytes<64>
+export type Reference = Bytes<32 | 64>
 
 export enum NodeType {
   value = 2,
