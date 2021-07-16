@@ -6,7 +6,7 @@ import {
   Reference,
   StorageHandler,
   StorageLoader,
-  StorageSaver
+  StorageSaver,
 } from './types'
 import {
   checkReference,
@@ -18,7 +18,7 @@ import {
   fromBigEndian,
   IndexBytes,
   keccak256Hash,
-  toBigEndianFromUint16
+  toBigEndianFromUint16,
 } from './utils'
 
 const pathSeparator = '/'
