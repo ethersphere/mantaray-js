@@ -27,6 +27,7 @@ const loadFunction = async (address: Reference): Promise<Uint8Array> => {
 const beeTestPageManifestData = async (): Promise<Uint8Array> => {
   const contentHash = await bee.uploadFilesFromDirectory(process.env.BEE_POSTAGE, join(__dirname, 'testpage'), {
     pin: true,
+    indexDocument: 'index.html',
   })
 
   return bee.downloadData(contentHash) //only download its manifest
@@ -86,6 +87,9 @@ it('should construct manifests of testpage folder', async () => {
   iNode.addFork(utf8ToBytes('img/icon.png'), hexToBytes(imageReference), {
     'Content-Type': 'image/png',
     Filename: 'icon.png',
+  })
+  iNode.addFork(utf8ToBytes('/'), hexToBytes(indexReference), {
+    'website-index-document': 'index.html',
   })
   const iNodeRef = await iNode.save(saveFunction)
   expect(Object.keys(iNode.forks)).toStrictEqual(Object.keys(node.forks))
