@@ -331,7 +331,7 @@ export class MantarayNode {
 
       if (path.length > nodeForkSizes.prefixMaxSize()) {
         const prefix = path.slice(0, nodeForkSizes.prefixMaxSize())
-        const rest = path.slice(0, nodeForkSizes.prefixMaxSize())
+        const rest = path.slice(nodeForkSizes.prefixMaxSize())
         newNode.addFork(rest, entry, metadata)
         newNode.updateWithPathSeparator(prefix)
         this.forks[path[0]] = new MantarayFork(prefix, newNode)
@@ -350,7 +350,6 @@ export class MantarayNode {
       newNode.updateWithPathSeparator(path)
       this.forks[path[0]] = new MantarayFork(path, newNode)
       this.makeEdge()
-      this.makeNotWithPathSeparator()
 
       return
     }
