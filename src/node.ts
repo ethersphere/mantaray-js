@@ -173,6 +173,7 @@ export class MantarayNode {
     checkReference(entry)
 
     this.entry = entry
+    this.makeValue()
     this.makeDirty()
   }
 
@@ -346,7 +347,6 @@ export class MantarayNode {
         newNode.setMetadata = metadata
       }
 
-      newNode.makeValue() // is it related to the setEntry?
       newNode.updateWithPathSeparator(path)
       this.forks[path[0]] = new MantarayFork(path, newNode)
       this.makeEdge()
@@ -377,7 +377,7 @@ export class MantarayNode {
     // NOTE: special case on edge split
     newNode.updateWithPathSeparator(path)
     // add new for shared prefix
-    newNode.addFork(path.slice(common.length > 0 ? common.length - 1 : 0), entry, metadata)
+    newNode.addFork(path.slice(commonPath.length), entry, metadata)
     this.forks[path[0]] = new MantarayFork(commonPath, newNode)
     this.makeEdge()
 
