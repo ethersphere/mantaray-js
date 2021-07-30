@@ -1,3 +1,7 @@
+# Description
+
+With this package you can manipulate and interpret mantaray data via `MantarayNode` and `MantarayFork` abstractions.
+
 # node binary format
 
 The following describes the format of a node binary format.

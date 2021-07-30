@@ -1,0 +1,52 @@
+{
+  "name": "mantaray-js",
+  "version": "1.0.0",
+  "description": "Mantaray data structure in JS",
+  "main": "dist/index.js",
+  "scripts": {
+    "compile:node": "webpack --progress --env target=node",
+    "dev": "npm run compile:node -- --watch --env mode=development",
+    "lint": "eslint --fix \"src/**/*.ts\" && prettier --write \"src/**/*.ts\"",
+    "lint:check": "eslint \"src/**/*.ts\" && prettier --check \"src/**/*.ts\"",
+    "test": "jest --verbose --config=jest.config.ts"
+  },
+  "keywords": [
+    "mantaray",
+    "manifest",
+    "swarm",
+    "swarm-manifest",
+    "key-value"
+  ],
+  "author": "Viktor Levente Tóth (@nugaon)",
+  "license": "BSD-3-Clause",
+  "dependencies": {
+    "get-random-values": "^1.2.2",
+    "js-sha3": "^0.8.0"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.14.6",
+    "@babel/plugin-proposal-class-properties": "^7.14.5",
+    "@babel/plugin-transform-runtime": "^7.14.5",
+    "@babel/preset-env": "^7.14.7",
+    "@babel/preset-typescript": "^7.14.5",
+    "@ethersphere/bee-js": "^1.0.0",
+    "@jest/types": "^27.0.6",
+    "@types/jest": "^26.0.24",
+    "@types/terser-webpack-plugin": "^5.0.4",
+    "@types/webpack-bundle-analyzer": "^4.4.1",
+    "@typescript-eslint/eslint-plugin": "^4.28.3",
+    "@typescript-eslint/parser": "^4.28.3",
+    "babel-jest": "^27.0.6",
+    "babel-loader": "^8.2.2",
+    "eslint": "^7.30.0",
+    "eslint-config-prettier": "^8.3.0",
+    "eslint-plugin-jest": "^24.3.6",
+    "eslint-plugin-prettier": "^3.4.0",
+    "eslint-plugin-unused-imports": "^1.1.2",
+    "jest": "^27.0.6",
+    "ts-node": "^10.1.0",
+    "webpack": "^5.44.0",
+    "webpack-bundle-analyzer": "^4.4.2",
+    "webpack-cli": "^4.7.2"
+  }
+}
