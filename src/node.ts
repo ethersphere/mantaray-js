@@ -173,7 +173,9 @@ export class MantarayNode {
     checkReference(entry)
 
     this.entry = entry
-    this.makeValue()
+
+    if (!equalBytes(entry, new Uint8Array(entry.length))) this.makeValue()
+
     this.makeDirty()
   }
 
@@ -526,10 +528,10 @@ export class MantarayNode {
 
       // Currently we don't persist the root nodeType when we marshal the manifest, as a result
       // the root nodeType information is lost on Unmarshal. This causes issues when we want to
-      // perform a path 'Walk' on the root. If there is more than 1 fork, the root node type
+      // perform a path 'Walk' on the root. If there is at least 1 fork, the root node type
       // is an edge, so we will deduce this information from index byte array
       if (!equalBytes(indexBytes, new Uint8Array(32))) {
-        this.type = NodeType.edge
+        this.makeEdge()
       }
       this.forks = {}
       const indexForks = new IndexBytes()
@@ -604,15 +606,6 @@ function serializeReferenceLength(entry: Reference): Bytes<1> {
   return bytes as Bytes<1>
 }
 
-/** loads forks of node in the next level */
-export async function loadForkNodes(storageLoader: StorageLoader, node: MantarayNode): Promise<void> {
-  if (!node.forks) return
-
-  for (const fork of Object.values(node.forks)) {
-    await fork.node.load(storageLoader, fork.node.getEntry)
-  }
-}
-
 /** loads all nodes recursively */
 export async function loadAllNodes(storageLoader: StorageLoader, node: MantarayNode): Promise<void> {
   if (!node.forks) return
@@ -620,5 +613,39 @@ export async function loadAllNodes(storageLoader: StorageLoader, node: MantarayN
   for (const fork of Object.values(node.forks)) {
     await fork.node.load(storageLoader, fork.node.getEntry)
     await loadAllNodes(storageLoader, fork.node)
+  }
+}
+
+/**
+ * Throws an error if the given nodes properties are not equal
+ *
+ * @param a Mantaray node to compare
+ * @param b Mantaray node to compare
+ * @param accumulatedPrefix accumulates the prefix during the recursion
+ * @throws Error if the two nodes properties are not equal recursively
+ */
+export const sameNodes = (a: MantarayNode, b: MantarayNode, accumulatedPrefix = ''): void | never => {
+  if (a.getType !== b.getType) {
+    throw Error(`Nodes do not have same type at prefix "${accumulatedPrefix}"\na: ${a.getType} <-> b: ${b.getType}`)
+  }
+
+  if (!a.forks) return
+
+  const aKeys = Object.keys(a.forks)
+
+  if (!b.forks || aKeys.length !== Object.keys(b.forks).length) {
+    throw Error(`Nodes do not have same fork length on equality check at prefix ${accumulatedPrefix}`)
+  }
+
+  for (const key of aKeys) {
+    const aFork: MantarayFork = a.forks[Number(key)]
+    const bFork: MantarayFork = b.forks[Number(key)]
+    const prefix = aFork.prefix
+
+    if (!equalBytes(prefix, bFork.prefix)) {
+      throw Error(`Nodes do not have same prefix under the same key "${key}" at prefix ${accumulatedPrefix}`)
+    }
+
+    sameNodes(aFork.node, bFork.node, accumulatedPrefix + prefix)
   }
 }
