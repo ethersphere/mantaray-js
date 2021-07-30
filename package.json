@@ -20,8 +20,7 @@
   "author": "Viktor Levente Tóth (@nugaon)",
   "license": "BSD-3-Clause",
   "dependencies": {
-    "js-sha3": "^0.8.0",
-    "nanoid": "^3.1.23"
+    "js-sha3": "^0.8.0"
   },
   "devDependencies": {
     "@babel/core": "^7.14.6",
@@ -43,6 +42,7 @@
     "eslint-plugin-jest": "^24.3.6",
     "eslint-plugin-prettier": "^3.4.0",
     "eslint-plugin-unused-imports": "^1.1.2",
+    "get-random-values": "^1.2.2",
     "jest": "^27.0.6",
     "ts-node": "^10.1.0",
     "webpack": "^5.44.0",
