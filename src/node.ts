@@ -481,7 +481,7 @@ export class MantarayNode {
     /// Forks
     const forkSerializations: Uint8Array[] = []
 
-    index.foreEach(byte => {
+    index.forEach(byte => {
       const fork = this.forks![byte]
 
       if (!fork) throw Error(`Fork indexing error: fork has not found under ${byte} index`)
@@ -538,7 +538,7 @@ export class MantarayNode {
       indexForks.setBytes = indexBytes
       offset += 32
 
-      indexForks.foreEach(byte => {
+      indexForks.forEach(byte => {
         let fork: MantarayFork
 
         if (data.length < offset + nodeForkSizes.nodeType) {
@@ -624,7 +624,7 @@ export async function loadAllNodes(storageLoader: StorageLoader, node: MantarayN
  * @param accumulatedPrefix accumulates the prefix during the recursion
  * @throws Error if the two nodes properties are not equal recursively
  */
-export const sameNodes = (a: MantarayNode, b: MantarayNode, accumulatedPrefix = ''): void | never => {
+export const equalNodes = (a: MantarayNode, b: MantarayNode, accumulatedPrefix = ''): void | never => {
   if (a.getType !== b.getType) {
     throw Error(`Nodes do not have same type at prefix "${accumulatedPrefix}"\na: ${a.getType} <-> b: ${b.getType}`)
   }
@@ -646,6 +646,6 @@ export const sameNodes = (a: MantarayNode, b: MantarayNode, accumulatedPrefix = 
       throw Error(`Nodes do not have same prefix under the same key "${key}" at prefix ${accumulatedPrefix}`)
     }
 
-    sameNodes(aFork.node, bFork.node, accumulatedPrefix + prefix)
+    equalNodes(aFork.node, bFork.node, accumulatedPrefix + prefix)
   }
 }

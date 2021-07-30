@@ -1,6 +1,6 @@
+import getRandomvalues from 'get-random-values'
 import type { Message } from 'js-sha3'
 import { keccak256 } from 'js-sha3'
-import { nanoid } from 'nanoid'
 import { Bytes, Reference } from './types'
 
 export function checkReference(ref: Reference): void | never {
@@ -129,7 +129,9 @@ export function toBigEndianFromUint16(value: number): Bytes<2> {
 }
 
 export function gen32Bytes(): Bytes<32> {
-  return new TextEncoder().encode(nanoid(32)) as Bytes<32>
+  const bytes = new Uint8Array(32)
+
+  return getRandomvalues(bytes) as Bytes<32>
 }
 
 /** It returns the common bytes of the two given byte arrays until the first byte difference */
@@ -179,7 +181,7 @@ export class IndexBytes {
   }
 
   /** Iterates through on the indexed byte values */
-  public foreEach(hook: (byte: number) => void): void {
+  public forEach(hook: (byte: number) => void): void {
     for (let i = 0; i <= 255; i++) {
       if (this.checkBytePresent(i)) {
         hook(i)
