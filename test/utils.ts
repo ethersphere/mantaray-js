@@ -1,4 +1,4 @@
-import { MantarayNode, sameNodes } from '../src/node'
+import { equalNodes, MantarayNode } from '../src/node'
 
 declare global {
   // eslint-disable-next-line @typescript-eslint/no-namespace
@@ -21,7 +21,7 @@ export function commonMatchers(): void {
       }
 
       try {
-        sameNodes(received, compareTo)
+        equalNodes(received, compareTo)
       } catch (e) {
         result.pass = false
         result.message = () => e.message
