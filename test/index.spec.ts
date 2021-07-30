@@ -5,7 +5,9 @@ import { initManifestNode, MantarayNode } from '../src'
 import { loadAllNodes } from '../src/node'
 import type { Reference } from '../src/types'
 import { gen32Bytes } from '../src/utils'
+import { commonMatchers } from './utils'
 
+commonMatchers()
 const beeUrl = process.env.BEE_API_URL || 'http://localhost:1633'
 const bee = new Bee(beeUrl)
 
@@ -72,9 +74,10 @@ it('should construct manifests of testpage folder', async () => {
   const testPage = join(__dirname, 'testpage')
   const indexHtmlBytes = FS.readFileSync(join(testPage, 'index.html'))
   const imageBytes = FS.readFileSync(join(testPage, 'img', 'icon.png'))
-  const [indexReference, imageReference] = await Promise.all([
+  const [indexReference, imageReference, haliReference] = await Promise.all([
     bee.uploadData(process.env.BEE_POSTAGE, indexHtmlBytes),
     bee.uploadData(process.env.BEE_POSTAGE, imageBytes),
+    bee.uploadData(process.env.BEE_POSTAGE, new Uint8Array([104, 97, 108, 105])),
   ])
   const utf8ToBytes = (value: string): Uint8Array => {
     return new TextEncoder().encode(value)
@@ -83,6 +86,10 @@ it('should construct manifests of testpage folder', async () => {
   iNode.addFork(utf8ToBytes('index.html'), hexToBytes(indexReference), {
     'Content-Type': 'text/html; charset=utf-8',
     Filename: 'index.html',
+  })
+  iNode.addFork(utf8ToBytes('img/icon.png.txt'), hexToBytes(haliReference), {
+    'Content-Type': 'text/plain',
+    Filename: 'icon.png.txt',
   })
   iNode.addFork(utf8ToBytes('img/icon.png'), hexToBytes(imageReference), {
     'Content-Type': 'image/png',
@@ -93,6 +100,11 @@ it('should construct manifests of testpage folder', async () => {
   })
   const iNodeRef = await iNode.save(saveFunction)
   expect(Object.keys(iNode.forks)).toStrictEqual(Object.keys(node.forks))
+  const marshal = iNode.serialize()
+  const iNodeAgain = new MantarayNode()
+  iNodeAgain.deserialize(marshal)
+  await loadAllNodes(loadFunction, iNodeAgain)
+  expect(iNode).toBeEqualNode(iNodeAgain)
   // eslint-disable-next-line no-console
   console.log('Constructed root manifest hash', Utils.Hex.bytesToHex(iNodeRef))
 })
