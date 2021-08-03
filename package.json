@@ -2,12 +2,16 @@
   "name": "mantaray-js",
   "version": "1.0.0",
   "description": "Mantaray data structure in JS",
-  "main": "dist/index.js",
+  "main": "dist/index.min.js",
+  "types": "dist/src/index.d.ts",
   "scripts": {
-    "compile:node": "webpack --progress --env target=node",
+    "prepare": "rimraf dist && npm run compile:types && npm run compile --env mode=production",
+    "compile": "webpack --progress --env target=node",
+    "compile:types": "tsc --emitDeclarationOnly --declaration --skipLibCheck",
     "dev": "npm run compile:node -- --watch --env mode=development",
     "lint": "eslint --fix \"src/**/*.ts\" && prettier --write \"src/**/*.ts\"",
     "lint:check": "eslint \"src/**/*.ts\" && prettier --check \"src/**/*.ts\"",
+    "check:types": "tsc --project tsconfig.json --skipLibCheck",
     "test": "jest --verbose --config=jest.config.ts"
   },
   "keywords": [
@@ -17,7 +21,6 @@
     "swarm-manifest",
     "key-value"
   ],
-  "author": "Viktor Levente Tóth (@nugaon)",
   "license": "BSD-3-Clause",
   "dependencies": {
     "get-random-values": "^1.2.2",
@@ -44,6 +47,7 @@
     "eslint-plugin-prettier": "^3.4.0",
     "eslint-plugin-unused-imports": "^1.1.2",
     "jest": "^27.0.6",
+    "rimraf": "^3.0.2",
     "ts-node": "^10.1.0",
     "webpack": "^5.44.0",
     "webpack-bundle-analyzer": "^4.4.2",
