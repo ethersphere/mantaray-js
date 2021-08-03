@@ -18,7 +18,7 @@ const base = async (env?: Partial<WebpackEnvParams>): Promise<Configuration> => 
     ['index', isProduction ? '.min' : null, '.js'].filter(Boolean).join('')
   const entry = Path.resolve(__dirname, 'src')
   const path = Path.resolve(__dirname, 'dist')
-  const target = 'node'
+  const target = 'web'
   const plugins: WebpackPluginInstance[] = [
     new DefinePlugin({
       'process.env.ENV': env?.mode || 'development',
