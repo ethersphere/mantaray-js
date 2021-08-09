@@ -13,6 +13,7 @@ import {
 } from './utils'
 
 const pathSeparator = '/'
+const pathSeparatorByte = 47
 
 type ForkMapping = { [key: number]: MantarayFork }
 
@@ -37,8 +38,12 @@ const nodeHeaderSizes = {
 } as const
 
 class NotFoundError extends Error {
-  constructor() {
-    super('Not found')
+  constructor(remainingPathBytes: Uint8Array, checkedPrefixBytes?: Uint8Array) {
+    const remainingPath = new TextDecoder().decode(remainingPathBytes)
+    const prefixInfo = checkedPrefixBytes
+      ? `Prefix on lookup: ${new TextDecoder().decode(checkedPrefixBytes)}`
+      : 'No fork on the level'
+    super(`Path has not found in the manifest. Remaining path on lookup: ${remainingPath}. ${prefixInfo}`)
   }
 }
 
@@ -386,19 +391,51 @@ export class MantarayNode {
     this.makeDirty()
   }
 
-  /** removes a path from the node */
-  public removePath(path: Uint8Array): void {
+  /**
+   * Gives back a MantarayFork under the given path
+   *
+   * @param path valid path within the MantarayNode
+   * @returns MantarayFork with the last unique prefix and its node
+   * @throws error if there is no node under the given path
+   */
+  public getForkAtPath(path: Uint8Array): MantarayFork {
     if (path.length === 0) throw EmptyPathError
 
     if (!this.forks) throw Error(`Fork mapping is not defined in the manifest`)
 
     const fork = this.forks[path[0]]
 
-    if (!fork) throw NotFoundError
+    if (!fork) throw new NotFoundError(path)
 
     const prefixIndex = findIndexOfArray(path, fork.prefix)
 
-    if (prefixIndex === -1) throw NotFoundError
+    if (prefixIndex === -1) throw new NotFoundError(path, fork.prefix)
+
+    const rest = path.slice(fork.prefix.length)
+
+    if (rest.length === 0) return fork
+
+    return fork.node.getForkAtPath(rest)
+  }
+
+  /**
+   * Removes a path from the node
+   *
+   * @param path Uint8Array of the path of the node intended to remove
+   * @param separatorCheck won't remove descendants nodes of the removable node which don't have directory separator in its prefixes.
+   */
+  public removePath(path: Uint8Array, separatorCheck = true): void {
+    if (path.length === 0) throw EmptyPathError
+
+    if (!this.forks) throw Error(`Fork mapping is not defined in the manifest`)
+
+    const fork = this.forks[path[0]]
+
+    if (!fork) throw new NotFoundError(path)
+
+    const prefixIndex = findIndexOfArray(path, fork.prefix)
+
+    if (prefixIndex === -1) throw new NotFoundError(path, fork.prefix)
 
     const rest = path.slice(fork.prefix.length)
 
@@ -581,6 +618,19 @@ export class MantarayNode {
 
 export function nodeTypeIsWithMetadataType(nodeType: number): boolean {
   return (nodeType & NodeType.withMetadata) === NodeType.withMetadata
+}
+
+/** Checks for separator character in the node and its descendants prefixes */
+export function checkForSeparator(node: MantarayNode): boolean {
+  for (const fork of Object.values(node.forks || {})) {
+    const pathIncluded = fork.prefix.some(v => v === pathSeparatorByte)
+
+    if (pathIncluded) return true
+
+    if (checkForSeparator(fork.node)) return true
+  }
+
+  return false
 }
 
 /**
