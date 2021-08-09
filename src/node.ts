@@ -440,6 +440,7 @@ export class MantarayNode {
 
     if (rest.length === 0) {
       // full path matched
+      this.makeDirty()
       delete this.forks[path[0]]
 
       return
