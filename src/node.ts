@@ -422,9 +422,8 @@ export class MantarayNode {
    * Removes a path from the node
    *
    * @param path Uint8Array of the path of the node intended to remove
-   * @param separatorCheck won't remove descendants nodes of the removable node which don't have directory separator in its prefixes.
    */
-  public removePath(path: Uint8Array, separatorCheck = true): void {
+  public removePath(path: Uint8Array): void {
     if (path.length === 0) throw EmptyPathError
 
     if (!this.forks) throw Error(`Fork mapping is not defined in the manifest`)
