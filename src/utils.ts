@@ -31,7 +31,7 @@ export function checkBytes<Length extends number>(bytes: unknown, length: number
  * @returns starting index of `searchFor` in `element`
  */
 export function findIndexOfArray(element: Uint8Array, searchFor: Uint8Array): number {
-  for (let i = 0; i < element.length - searchFor.length; i++) {
+  for (let i = 0; i <= element.length - searchFor.length; i++) {
     let j = 0
     while (j < searchFor.length) {
       if (element[i + j] !== searchFor[j++]) break
