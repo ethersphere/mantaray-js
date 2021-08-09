@@ -1,10 +1,9 @@
 import { Bee, Utils } from '@ethersphere/bee-js'
 import FS from 'fs'
 import { join } from 'path'
-import { initManifestNode, MantarayNode } from '../src'
+import { MantarayNode } from '../src'
 import { loadAllNodes } from '../src/node'
 import type { Reference } from '../src/types'
-import { gen32Bytes } from '../src/utils'
 import { commonMatchers } from './utils'
 
 commonMatchers()
@@ -34,24 +33,6 @@ const beeTestPageManifestData = async (): Promise<Uint8Array> => {
 
   return bee.downloadData(contentHash) //only download its manifest
 }
-
-it('should init a single mantaray node with a random address', () => {
-  const node = initManifestNode()
-  const randAddress = gen32Bytes()
-  node.setEntry = randAddress
-  const serialized = node.serialize()
-  const nodeAgain = new MantarayNode()
-  nodeAgain.deserialize(serialized)
-  expect(randAddress).toStrictEqual(nodeAgain.getEntry)
-})
-
-it('should throw exception on serialize if there were no storage saves before', () => {
-  const node = initManifestNode()
-  const randAddress = gen32Bytes()
-  const path = new TextEncoder().encode('vmi')
-  node.addFork(path, randAddress)
-  expect(() => node.serialize()).toThrowError()
-})
 
 it('should serialize/deserialize the same as Bee', async () => {
   const data = await beeTestPageManifestData()
