@@ -4,7 +4,7 @@ import { join } from 'path'
 import { MantarayNode } from '../src'
 import { loadAllNodes } from '../src/node'
 import type { Reference } from '../src/types'
-import { commonMatchers } from './utils'
+import { commonMatchers, getSampleMantarayNode } from './utils'
 
 commonMatchers()
 const beeUrl = process.env.BEE_API_URL || 'http://localhost:1633'
@@ -88,4 +88,32 @@ it('should construct manifests of testpage folder', async () => {
   expect(iNode).toBeEqualNode(iNodeAgain)
   // eslint-disable-next-line no-console
   console.log('Constructed root manifest hash', Utils.Hex.bytesToHex(iNodeRef))
+})
+
+it('should remove fork then upload it', async () => {
+  const sampleNode = getSampleMantarayNode()
+  const node = sampleNode.node
+  const path1 = sampleNode.paths[0]
+  const path2 = sampleNode.paths[1]
+  // save sample node
+  const refOriginal = await node.save(saveFunction)
+  /** node where the fork set will change */
+  const getCheckNode = (): MantarayNode => {
+    return node.getForkAtPath(new TextEncoder().encode('path1/valami/')).node
+  }
+  const checkNode1 = getCheckNode()
+  const refCheckNode1 = checkNode1.getContentAddress
+  // current forks of node
+  expect(Object.keys(checkNode1.forks)).toStrictEqual([String(path1[13]), String(path2[13])])
+  node.removePath(path2)
+  const refDeleted = await node.save(saveFunction)
+  // root reference should remain the same
+  expect(refDeleted).toStrictEqual(refOriginal)
+  node.load(loadFunction, refDeleted)
+  // 'm' key of prefix table disappeared
+  const checkNode2 = getCheckNode()
+  expect(Object.keys(checkNode2.forks)).toStrictEqual([String(path1[13])])
+  // reference should differ because the changed fork set
+  const refCheckNode2 = checkNode2.getContentAddress
+  expect(refCheckNode2).not.toStrictEqual(refCheckNode1)
 })

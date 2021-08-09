@@ -1,27 +1,7 @@
 import { initManifestNode, MantarayNode } from '../src'
 import { checkForSeparator } from '../src/node'
 import { gen32Bytes } from '../src/utils'
-
-const getSampleMantarayNode = (): { node: MantarayNode; paths: Uint8Array[] } => {
-  const node = new MantarayNode()
-  const randAddress = gen32Bytes()
-  node.setEntry = randAddress
-  const path1 = new TextEncoder().encode('path1/valami/elso')
-  const path2 = new TextEncoder().encode('path1/valami/masodik')
-  const path3 = new TextEncoder().encode('path1/valami/masodik.ext')
-  const path4 = new TextEncoder().encode('path1/valami')
-  const path5 = new TextEncoder().encode('path2')
-  node.addFork(path1, randAddress, { vmi: 'elso' })
-  node.addFork(path2, randAddress)
-  node.addFork(path3, randAddress)
-  node.addFork(path4, randAddress, { vmi: 'negy' })
-  node.addFork(path5, randAddress)
-
-  return {
-    node,
-    paths: [path1, path2, path3, path4, path5],
-  }
-}
+import { getSampleMantarayNode } from './utils'
 
 it('should init a single mantaray node with a random address', () => {
   const node = initManifestNode()
@@ -87,4 +67,22 @@ it('checks the expected structure of the sample mantaray node', () => {
   expect(Object.keys(fifthLevelNode2.forks)).toStrictEqual([String(path3[20])]) // fifth level 2: '.'
   const sixthLevelNode1 = fifthLevelNode2.forks[path3[20]]
   expect(sixthLevelNode1.prefix).toStrictEqual(new TextEncoder().encode('.ext'))
+})
+
+it('should remove forks', () => {
+  const sampleNode = getSampleMantarayNode()
+  const node = sampleNode.node
+  // save sample node
+  const path1 = sampleNode.paths[0]
+  const path2 = sampleNode.paths[1]
+
+  // non existing path check
+  expect(() => node.removePath(new Uint8Array([0, 1, 2]))).toThrowError()
+  // node where the fork set will change
+  const checkNode1 = node.getForkAtPath(new TextEncoder().encode('path1/valami/')).node
+  // current forks of node
+  expect(Object.keys(checkNode1.forks)).toStrictEqual([String(path1[13]), String(path2[13])])
+  node.removePath(path2)
+  // 'm' key of prefix table disappeared
+  expect(Object.keys(checkNode1.forks)).toStrictEqual([String(path1[13])])
 })
