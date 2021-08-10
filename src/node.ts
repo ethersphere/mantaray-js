@@ -12,8 +12,8 @@ import {
   toBigEndianFromUint16,
 } from './utils'
 
-const pathSeparator = '/'
-const pathSeparatorByte = 47
+const PATH_SEPARATOR = '/'
+const PATH_SEPARATOR_BYTE = 47
 
 type ForkMapping = { [key: number]: MantarayFork }
 
@@ -296,7 +296,7 @@ export class MantarayNode {
   }
 
   private updateWithPathSeparator(path: Uint8Array) {
-    if (new TextDecoder().decode(path).includes(pathSeparator)) {
+    if (new TextDecoder().decode(path).includes(PATH_SEPARATOR)) {
       this.makeWithPathSeparator()
     } else {
       this.makeNotWithPathSeparator()
@@ -622,7 +622,7 @@ export function nodeTypeIsWithMetadataType(nodeType: number): boolean {
 /** Checks for separator character in the node and its descendants prefixes */
 export function checkForSeparator(node: MantarayNode): boolean {
   for (const fork of Object.values(node.forks || {})) {
-    const pathIncluded = fork.prefix.some(v => v === pathSeparatorByte)
+    const pathIncluded = fork.prefix.some(v => v === PATH_SEPARATOR_BYTE)
 
     if (pathIncluded) return true
 
