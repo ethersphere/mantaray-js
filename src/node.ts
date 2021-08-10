@@ -343,6 +343,7 @@ export class MantarayNode {
         newNode.addFork(rest, entry, metadata)
         newNode.updateWithPathSeparator(prefix)
         this.forks[path[0]] = new MantarayFork(prefix, newNode)
+        this.makeDirty()
         this.makeEdge()
 
         return
@@ -356,6 +357,7 @@ export class MantarayNode {
 
       newNode.updateWithPathSeparator(path)
       this.forks[path[0]] = new MantarayFork(path, newNode)
+      this.makeDirty()
       this.makeEdge()
 
       return
@@ -440,6 +442,7 @@ export class MantarayNode {
 
     if (rest.length === 0) {
       // full path matched
+      this.makeDirty()
       delete this.forks[path[0]]
 
       return
