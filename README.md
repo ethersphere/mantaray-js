@@ -53,3 +53,10 @@ The following describes the format of a node binary format.
 │                                                              │
 └──────────────────────────────────────────────────────────────┘
 ```
+
+## Maintainers
+
+- [nugaon](https://github.com/nugaon)
+- [AuHau](https://github.com/AuHau)
+
+See what "Maintainer" means [here](https://github.com/ethersphere/repo-maintainer).
