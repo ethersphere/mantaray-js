@@ -92,6 +92,7 @@ module.exports = {
     "@typescript-eslint/require-await": "off",
     "@typescript-eslint/no-unused-vars": "off",
     "unused-imports/no-unused-imports": "error",
+    "@typescript-eslint/no-non-null-assertion": "off",
     "unused-imports/no-unused-vars": [
       "warn",
       { "vars": "all", "varsIgnorePattern": "^_", "args": "after-used", "argsIgnorePattern": "^_" }
