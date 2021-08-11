@@ -6,14 +6,14 @@ With this package you can manipulate and interpret mantaray data via `MantarayNo
 
 You can import the followings directly from `mantaray-js`:
 
-* MantarayNode        # class for abstracting and manipulating Mantaray Node data
+* MantarayNode        # class abstracting and manipulating Mantaray Node data
 * MantarayFork        # class abstracting and manipulating Mantaray Fork data
 * checkForSeparator   # checks for separator character in the node and its descendants prefixes
 * initManifestNode    # initialize a manifest node
 * loadAllNodes        # loads all mantaray nodes recursively from the storage
 * equalNodes          # checks whether the two given Mantaray Nodes objects are equal in the in-memory abstraction level
 * Utils               # all used utility functions in the library. Mostly operating on `Uint8Array` objects.
-* types*              # not callable, here we are just referring all types are exported and reachable from the index
+* types*              # not callable, referring all types exported and reachable from the index
 
 # Basic usage
 
