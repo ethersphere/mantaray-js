@@ -618,7 +618,7 @@ export class MantarayNode {
   }
 }
 
-export function nodeTypeIsWithMetadataType(nodeType: number): boolean {
+function nodeTypeIsWithMetadataType(nodeType: number): boolean {
   return (nodeType & NodeType.withMetadata) === NodeType.withMetadata
 }
 

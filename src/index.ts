@@ -1,4 +1,4 @@
-import { MantarayFork, MantarayNode } from './node'
+import { MantarayNode } from './node'
 import { Bytes } from './types'
 import { gen32Bytes } from './utils'
 
@@ -10,4 +10,6 @@ export function initManifestNode(options?: { obfuscationKey?: Bytes<32> }): Mant
   return manifestNode
 }
 
-export { MantarayNode, MantarayFork }
+export * from './node'
+export * from './types'
+export * as Utils from './utils'
