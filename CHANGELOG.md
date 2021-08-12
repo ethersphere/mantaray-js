@@ -1,5 +1,12 @@
 # Changelog
 
+### [1.0.1](https://www.github.com/ethersphere/mantaray-js/compare/v1.0.0...v1.0.1) (2021-08-12)
+
+
+### Bug Fixes
+
+* path of types in package.json ([#10](https://www.github.com/ethersphere/mantaray-js/issues/10)) ([fa3b96e](https://www.github.com/ethersphere/mantaray-js/commit/fa3b96eca0e1fb682d6322b8541cf6afe548e50f))
+
 ## 1.0.0 (2021-08-12)
 
 First version of the `mantaray-js`!
