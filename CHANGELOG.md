@@ -2,6 +2,33 @@
 
 ## 1.0.0 (2021-08-12)
 
+First version of the `mantaray-js`!
+
+All necessary functionality is available in the package to manipulate the `mantaray` data structure like:
+
+* init Mantaray node
+* serialize/deserialize of Mantaray in-memory object
+* add forks
+* remove path
+* add metadata
+* add entry
+* set obfuscation key
+* load from storage
+* save to storage recursively
+* get fork at an arbitrary path
+
+All of these you can do through the `MantarayNode` and `MantarayFork` abstractions.
+
+1.0.0 version of `mantaray-js` provides the following importables:
+
+* MantarayNode        # class abstracting and manipulating Mantaray Node data
+* MantarayFork        # class abstracting and manipulating Mantaray Fork data
+* checkForSeparator   # checks for separator character in the node and its descendants prefixes
+* initManifestNode    # initialize a manifest node
+* loadAllNodes        # loads all mantaray nodes recursively from the storage
+* equalNodes          # checks whether the two given Mantaray Nodes objects are equal in the in-memory abstraction level
+* Utils               # all used utility functions in the library. Mostly operating on `Uint8Array` objects.
+* types*              # not callable, referring all types exported and reachable from the index
 
 ### Features
 
