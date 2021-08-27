@@ -381,8 +381,7 @@ export class MantarayNode {
       newNode = new MantarayNode()
       newNode.setObfuscationKey = this.obfuscationKey || (new Uint8Array(32) as Bytes<32>)
 
-      // TODO: change it on Bee-side: code below does not do anything 
-      // fork.node.updateWithPathSeparator(restPath)
+      fork.node.updateWithPathSeparator(restPath)
       newNode.forks = {}
       newNode.forks[restPath[0]] = new MantarayFork(restPath, fork.node)
       newNode.makeEdge()
