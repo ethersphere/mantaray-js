@@ -206,6 +206,13 @@ export class MantarayNode {
   public set setMetadata(metadata: MetadataMapping) {
     this.metadata = metadata
     this.makeWithMetadata()
+
+    // TODO: when the mantaray node is a pointer by its metadata then
+    // the node has to be with `value` type even though it has zero address
+    // should get info why is `withMetadata` as type is not enough
+    if (metadata['website-index-document']) {
+      this.makeValue()
+    }
     this.makeDirty()
   }
 
@@ -296,7 +303,9 @@ export class MantarayNode {
   }
 
   private updateWithPathSeparator(path: Uint8Array) {
-    if (new TextDecoder().decode(path).includes(PATH_SEPARATOR)) {
+    // TODO: it is not clear why the `withPathSeparator` is not related to the first path element -> should get info about it
+    // if (new TextDecoder().decode(path).includes(PATH_SEPARATOR)) {
+    if (new TextDecoder().decode(path).slice(1).includes(PATH_SEPARATOR)) {
       this.makeWithPathSeparator()
     } else {
       this.makeNotWithPathSeparator()
@@ -372,7 +381,8 @@ export class MantarayNode {
       newNode = new MantarayNode()
       newNode.setObfuscationKey = this.obfuscationKey || (new Uint8Array(32) as Bytes<32>)
 
-      fork.node.updateWithPathSeparator(restPath)
+      // TODO: change it on Bee-side: code below does not do anything 
+      // fork.node.updateWithPathSeparator(restPath)
       newNode.forks = {}
       newNode.forks[restPath[0]] = new MantarayFork(restPath, fork.node)
       newNode.makeEdge()
@@ -384,8 +394,11 @@ export class MantarayNode {
     }
 
     // NOTE: special case on edge split
-    newNode.updateWithPathSeparator(path)
-    // add new for shared prefix
+    // newNode will be the common path edge node
+    // TODO: change it on Bee side! -> newNode is the edge (parent) node of the newly created path, so `commonPath` should be passed instead of `path`
+    // newNode.updateWithPathSeparator(path)
+    newNode.updateWithPathSeparator(commonPath)
+    // newNode's prefix is a subset of the given `path`, here the desired fork will be added with the truncated path
     newNode.addFork(path.slice(commonPath.length), entry, metadata)
     this.forks[path[0]] = new MantarayFork(commonPath, newNode)
     this.makeEdge()
@@ -693,11 +706,12 @@ export const equalNodes = (a: MantarayNode, b: MantarayNode, accumulatedPrefix =
     const aFork: MantarayFork = a.forks[Number(key)]
     const bFork: MantarayFork = b.forks[Number(key)]
     const prefix = aFork.prefix
+    const prefixString = new TextDecoder().decode(prefix)
 
     if (!equalBytes(prefix, bFork.prefix)) {
       throw Error(`Nodes do not have same prefix under the same key "${key}" at prefix ${accumulatedPrefix}`)
     }
 
-    equalNodes(aFork.node, bFork.node, accumulatedPrefix + prefix)
+    equalNodes(aFork.node, bFork.node, accumulatedPrefix + prefixString)
   }
 }
