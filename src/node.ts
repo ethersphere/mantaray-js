@@ -216,15 +216,11 @@ export class MantarayNode {
     this.makeDirty()
   }
 
-  public get getObfuscationKey(): Bytes<32> {
-    if (!this.obfuscationKey) throw PropertyIsUndefined
-
+  public get getObfuscationKey(): Bytes<32> | undefined {
     return this.obfuscationKey
   }
 
-  public get getEntry(): Reference {
-    if (!this.entry) throw PropertyIsUndefined
-
+  public get getEntry(): Reference | undefined {
     return this.entry
   }
 
@@ -232,9 +228,7 @@ export class MantarayNode {
     return this.contentAddress
   }
 
-  public get getMetadata(): MetadataMapping {
-    if (!this.metadata) throw PropertyIsUndefined
-
+  public get getMetadata(): MetadataMapping | undefined {
     return this.metadata
   }
 
@@ -675,7 +669,7 @@ export async function loadAllNodes(storageLoader: StorageLoader, node: MantarayN
   if (!node.forks) return
 
   for (const fork of Object.values(node.forks)) {
-    await fork.node.load(storageLoader, fork.node.getEntry)
+    if (fork.node.getEntry) await fork.node.load(storageLoader, fork.node.getEntry)
     await loadAllNodes(storageLoader, fork.node)
   }
 }
