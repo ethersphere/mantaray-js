@@ -210,7 +210,7 @@ export class MantarayNode {
     // TODO: when the mantaray node is a pointer by its metadata then
     // the node has to be with `value` type even though it has zero address
     // should get info why is `withMetadata` as type is not enough
-    if (metadata['website-index-document']) {
+    if (metadata['website-index-document'] || metadata['website-error-document']) {
       this.makeValue()
     }
     this.makeDirty()
