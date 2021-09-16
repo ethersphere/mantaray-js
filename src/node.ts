@@ -683,12 +683,36 @@ export async function loadAllNodes(storageLoader: StorageLoader, node: MantarayN
  * @throws Error if the two nodes properties are not equal recursively
  */
 export const equalNodes = (a: MantarayNode, b: MantarayNode, accumulatedPrefix = ''): void | never => {
+  // node type comparisation
   if (a.getType !== b.getType) {
     throw Error(`Nodes do not have same type at prefix "${accumulatedPrefix}"\na: ${a.getType} <-> b: ${b.getType}`)
   }
 
+  // node metadata comparisation
+  if (!a.getMetadata !== !b.getMetadata) {
+    throw Error(`One of the nodes do not have metadata defined. \n a: ${a.getMetadata} \n b: ${b.getMetadata}`)
+  } else if (a.getMetadata && b.getMetadata) {
+    let aMetadata, bMetadata: string
+    try {
+      aMetadata = JSON.stringify(a.getMetadata)
+      bMetadata = JSON.stringify(b.getMetadata)
+    } catch (e) {
+      throw Error(`Either of the nodes has invalid JSON metadata. \n a: ${a.getMetadata} \n b: ${b.getMetadata}`)
+    }
+
+    if (aMetadata !== bMetadata) {
+      throw Error(`The node's metadata are different. a: ${aMetadata} \n b: ${bMetadata}`)
+    }
+  }
+
+  // node entry comparisation
+  if (a.getEntry === b.getEntry) {
+    throw Error(`Nodes do not have same entries. \n a: ${a.getEntry} \n b: ${a.getEntry}`)
+  }
+
   if (!a.forks) return
 
+  // node fork comparisation
   const aKeys = Object.keys(a.forks)
 
   if (!b.forks || aKeys.length !== Object.keys(b.forks).length) {
