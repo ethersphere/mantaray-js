@@ -8,7 +8,7 @@
     "prepare": "rimraf dist && npm run compile:types && npm run compile --env mode=production",
     "compile": "webpack --progress --env target=node",
     "compile:types": "tsc --emitDeclarationOnly --declaration --skipLibCheck",
-    "dev": "npm run compile:node -- --watch --env mode=development",
+    "dev": "npm run compile -- --watch --env mode=development",
     "lint": "eslint --fix \"src/**/*.ts\" && prettier --write \"src/**/*.ts\"",
     "lint:check": "eslint \"src/**/*.ts\" && prettier --check \"src/**/*.ts\"",
     "check:types": "tsc --project tsconfig.json --skipLibCheck",
