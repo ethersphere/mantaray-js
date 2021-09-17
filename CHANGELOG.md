@@ -1,5 +1,12 @@
 # Changelog
 
+### [1.0.2](https://www.github.com/ethersphere/mantaray-js/compare/v1.0.1...v1.0.2) (2021-09-17)
+
+
+### Bug Fixes
+
+* bee compatibility ([#14](https://www.github.com/ethersphere/mantaray-js/issues/14)) ([b8cde41](https://www.github.com/ethersphere/mantaray-js/commit/b8cde415dda540b48e81ed47079b6812adea1700))
+
 ### [1.0.1](https://www.github.com/ethersphere/mantaray-js/compare/v1.0.0...v1.0.1) (2021-08-12)
 
 
