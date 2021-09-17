@@ -112,6 +112,20 @@ The following describes the format of a node binary format.
 └──────────────────────────────────────────────────────────────┘
 ```
 
+# Testing
+
+The testing needs running Bee client node for integration testing.
+You can set `BEE_POSTAGE` environment variable with a valid Postage batch or the test will create one for you.
+
+The default value of the Bee Debug API endpoint is `http://localhost:1635`. 
+If your address diverges from that, please, set `BEE_DEBUG_API_URL` system environment variable with yours.
+
+To run test execute
+
+```sh
+npm run test
+```
+
 ## Maintainers
 
 - [nugaon](https://github.com/nugaon)

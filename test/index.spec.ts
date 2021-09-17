@@ -51,6 +51,7 @@ it('should construct manifests of testpage folder', async () => {
   const data = await beeTestPageManifestData()
   const node = new MantarayNode()
   node.deserialize(data)
+  await loadAllNodes(loadFunction, node)
 
   const testPage = join(__dirname, 'testpage')
   const indexHtmlBytes = FS.readFileSync(join(testPage, 'index.html'))
@@ -69,14 +70,14 @@ it('should construct manifests of testpage folder', async () => {
     Filename: 'index.html',
   })
   iNode.addFork(utf8ToBytes('img/icon.png.txt'), hexToBytes(haliReference), {
-    'Content-Type': 'text/plain',
+    'Content-Type': '', // FIXME: The bee node assigns empty string to Content Type in this case
     Filename: 'icon.png.txt',
   })
   iNode.addFork(utf8ToBytes('img/icon.png'), hexToBytes(imageReference), {
     'Content-Type': 'image/png',
     Filename: 'icon.png',
   })
-  iNode.addFork(utf8ToBytes('/'), hexToBytes(indexReference), {
+  iNode.addFork(utf8ToBytes('/'), new Uint8Array(32) as Reference, {
     'website-index-document': 'index.html',
   })
   const iNodeRef = await iNode.save(saveFunction)
@@ -85,7 +86,10 @@ it('should construct manifests of testpage folder', async () => {
   const iNodeAgain = new MantarayNode()
   iNodeAgain.deserialize(marshal)
   await loadAllNodes(loadFunction, iNodeAgain)
+  // check after serialization the object is same
   expect(iNode).toBeEqualNode(iNodeAgain)
+  // check bee manifest is equal with the constructed one.
+  expect(iNode).toBeEqualNode(node)
   // eslint-disable-next-line no-console
   console.log('Constructed root manifest hash', Utils.Hex.bytesToHex(iNodeRef))
 })

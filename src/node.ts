@@ -206,18 +206,21 @@ export class MantarayNode {
   public set setMetadata(metadata: MetadataMapping) {
     this.metadata = metadata
     this.makeWithMetadata()
+
+    // TODO: when the mantaray node is a pointer by its metadata then
+    // the node has to be with `value` type even though it has zero address
+    // should get info why is `withMetadata` as type is not enough
+    if (metadata['website-index-document'] || metadata['website-error-document']) {
+      this.makeValue()
+    }
     this.makeDirty()
   }
 
-  public get getObfuscationKey(): Bytes<32> {
-    if (!this.obfuscationKey) throw PropertyIsUndefined
-
+  public get getObfuscationKey(): Bytes<32> | undefined {
     return this.obfuscationKey
   }
 
-  public get getEntry(): Reference {
-    if (!this.entry) throw PropertyIsUndefined
-
+  public get getEntry(): Reference | undefined {
     return this.entry
   }
 
@@ -225,9 +228,7 @@ export class MantarayNode {
     return this.contentAddress
   }
 
-  public get getMetadata(): MetadataMapping {
-    if (!this.metadata) throw PropertyIsUndefined
-
+  public get getMetadata(): MetadataMapping | undefined {
     return this.metadata
   }
 
@@ -296,7 +297,9 @@ export class MantarayNode {
   }
 
   private updateWithPathSeparator(path: Uint8Array) {
-    if (new TextDecoder().decode(path).includes(PATH_SEPARATOR)) {
+    // TODO: it is not clear why the `withPathSeparator` is not related to the first path element -> should get info about it
+    // if (new TextDecoder().decode(path).includes(PATH_SEPARATOR)) {
+    if (new TextDecoder().decode(path).slice(1).includes(PATH_SEPARATOR)) {
       this.makeWithPathSeparator()
     } else {
       this.makeNotWithPathSeparator()
@@ -384,8 +387,11 @@ export class MantarayNode {
     }
 
     // NOTE: special case on edge split
-    newNode.updateWithPathSeparator(path)
-    // add new for shared prefix
+    // newNode will be the common path edge node
+    // TODO: change it on Bee side! -> newNode is the edge (parent) node of the newly created path, so `commonPath` should be passed instead of `path`
+    // newNode.updateWithPathSeparator(path)
+    newNode.updateWithPathSeparator(commonPath)
+    // newNode's prefix is a subset of the given `path`, here the desired fork will be added with the truncated path
     newNode.addFork(path.slice(commonPath.length), entry, metadata)
     this.forks[path[0]] = new MantarayFork(commonPath, newNode)
     this.makeEdge()
@@ -663,7 +669,7 @@ export async function loadAllNodes(storageLoader: StorageLoader, node: MantarayN
   if (!node.forks) return
 
   for (const fork of Object.values(node.forks)) {
-    await fork.node.load(storageLoader, fork.node.getEntry)
+    if (fork.node.getEntry) await fork.node.load(storageLoader, fork.node.getEntry)
     await loadAllNodes(storageLoader, fork.node)
   }
 }
@@ -677,12 +683,36 @@ export async function loadAllNodes(storageLoader: StorageLoader, node: MantarayN
  * @throws Error if the two nodes properties are not equal recursively
  */
 export const equalNodes = (a: MantarayNode, b: MantarayNode, accumulatedPrefix = ''): void | never => {
+  // node type comparisation
   if (a.getType !== b.getType) {
     throw Error(`Nodes do not have same type at prefix "${accumulatedPrefix}"\na: ${a.getType} <-> b: ${b.getType}`)
   }
 
+  // node metadata comparisation
+  if (!a.getMetadata !== !b.getMetadata) {
+    throw Error(`One of the nodes do not have metadata defined. \n a: ${a.getMetadata} \n b: ${b.getMetadata}`)
+  } else if (a.getMetadata && b.getMetadata) {
+    let aMetadata, bMetadata: string
+    try {
+      aMetadata = JSON.stringify(a.getMetadata)
+      bMetadata = JSON.stringify(b.getMetadata)
+    } catch (e) {
+      throw Error(`Either of the nodes has invalid JSON metadata. \n a: ${a.getMetadata} \n b: ${b.getMetadata}`)
+    }
+
+    if (aMetadata !== bMetadata) {
+      throw Error(`The node's metadata are different. a: ${aMetadata} \n b: ${bMetadata}`)
+    }
+  }
+
+  // node entry comparisation
+  if (a.getEntry === b.getEntry) {
+    throw Error(`Nodes do not have same entries. \n a: ${a.getEntry} \n b: ${a.getEntry}`)
+  }
+
   if (!a.forks) return
 
+  // node fork comparisation
   const aKeys = Object.keys(a.forks)
 
   if (!b.forks || aKeys.length !== Object.keys(b.forks).length) {
@@ -693,11 +723,12 @@ export const equalNodes = (a: MantarayNode, b: MantarayNode, accumulatedPrefix =
     const aFork: MantarayFork = a.forks[Number(key)]
     const bFork: MantarayFork = b.forks[Number(key)]
     const prefix = aFork.prefix
+    const prefixString = new TextDecoder().decode(prefix)
 
     if (!equalBytes(prefix, bFork.prefix)) {
       throw Error(`Nodes do not have same prefix under the same key "${key}" at prefix ${accumulatedPrefix}`)
     }
 
-    equalNodes(aFork.node, bFork.node, accumulatedPrefix + prefix)
+    equalNodes(aFork.node, bFork.node, accumulatedPrefix + prefixString)
   }
 }
