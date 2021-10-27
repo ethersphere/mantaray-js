@@ -9,7 +9,7 @@ import {
   fromBigEndian,
   IndexBytes,
   keccak256Hash,
-  toBigEndianFromUint16,
+  toBigEndianFromUint16
 } from './utils'
 
 const PATH_SEPARATOR = '/'
@@ -555,8 +555,12 @@ export class MantarayNode {
     if (data.length < nodeHeaderSize) throw Error('serialised input too short')
 
     this.obfuscationKey = new Uint8Array(data.slice(0, nodeHeaderSizes.obfuscationKey)) as Bytes<32>
+
     // perform XOR decryption on bytes after obfuscation key
-    encryptDecrypt(this.obfuscationKey, data, this.obfuscationKey.length)
+    // FIXME: in Bee
+    if (!equalBytes(new Uint8Array(32), this.obfuscationKey)) {
+      encryptDecrypt(this.obfuscationKey, data, this.obfuscationKey.length)
+    }
 
     const versionHash = data.slice(
       nodeHeaderSizes.obfuscationKey,
