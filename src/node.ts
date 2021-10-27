@@ -9,7 +9,7 @@ import {
   fromBigEndian,
   IndexBytes,
   keccak256Hash,
-  toBigEndianFromUint16
+  toBigEndianFromUint16,
 } from './utils'
 
 const PATH_SEPARATOR = '/'
@@ -552,7 +552,7 @@ export class MantarayNode {
   public deserialize(data: Uint8Array): void {
     const nodeHeaderSize = nodeHeaderSizes.full()
 
-    if (data.length < nodeHeaderSize) throw Error('serialised input too short')
+    if (data.length < nodeHeaderSize) throw Error('The serialised input is too short')
 
     this.obfuscationKey = new Uint8Array(data.slice(0, nodeHeaderSizes.obfuscationKey)) as Bytes<32>
 
