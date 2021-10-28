@@ -1,5 +1,12 @@
 # Changelog
 
+### [1.0.3](https://www.github.com/ethersphere/mantaray-js/compare/v1.0.2...v1.0.3) (2021-10-28)
+
+
+### Miscellaneous Chores
+
+* release 1.0.3 ([ec08977](https://www.github.com/ethersphere/mantaray-js/commit/ec08977d2d6935d8eed05750716f4d703906bc04))
+
 ### [1.0.2](https://www.github.com/ethersphere/mantaray-js/compare/v1.0.1...v1.0.2) (2021-09-17)
 
 
