@@ -1,6 +1,6 @@
 {
   "name": "mantaray-js",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Mantaray data structure in JS",
   "main": "dist/index.min.js",
   "types": "dist/index.d.ts",
