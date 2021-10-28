@@ -3,9 +3,9 @@
 ### [1.0.3](https://www.github.com/ethersphere/mantaray-js/compare/v1.0.2...v1.0.3) (2021-10-28)
 
 
-### Miscellaneous Chores
+### Bug Fixes
 
-* release 1.0.3 ([ec08977](https://www.github.com/ethersphere/mantaray-js/commit/ec08977d2d6935d8eed05750716f4d703906bc04))
+* deserialisation of a mantaray node that includes only one file ([1680cbf](https://github.com/ethersphere/mantaray-js/commit/1680cbf6ccbdac42ee833a9611a5343751b03ed8))
 
 ### [1.0.2](https://www.github.com/ethersphere/mantaray-js/compare/v1.0.1...v1.0.2) (2021-09-17)
 
