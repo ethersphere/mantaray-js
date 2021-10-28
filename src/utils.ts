@@ -84,6 +84,9 @@ export function equalBytes(a: Uint8Array, b: Uint8Array): boolean {
  * hasn't already been, and decrypting it if it has, using the key provided.
  */
 export function encryptDecrypt(key: Uint8Array, data: Uint8Array, startIndex = 0, endIndex?: number): void {
+  // FIXME: in Bee
+  if (equalBytes(key, new Uint8Array(32))) return
+
   endIndex ||= data.length
 
   for (let i = startIndex; i < endIndex; i += key.length) {

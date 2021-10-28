@@ -555,12 +555,8 @@ export class MantarayNode {
     if (data.length < nodeHeaderSize) throw Error('The serialised input is too short')
 
     this.obfuscationKey = new Uint8Array(data.slice(0, nodeHeaderSizes.obfuscationKey)) as Bytes<32>
-
     // perform XOR decryption on bytes after obfuscation key
-    // FIXME: in Bee
-    if (!equalBytes(new Uint8Array(32), this.obfuscationKey)) {
-      encryptDecrypt(this.obfuscationKey, data, this.obfuscationKey.length)
-    }
+    encryptDecrypt(this.obfuscationKey, data, this.obfuscationKey.length)
 
     const versionHash = data.slice(
       nodeHeaderSizes.obfuscationKey,
