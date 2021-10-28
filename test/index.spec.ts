@@ -56,7 +56,7 @@ it('should construct manifests of testpage folder', async () => {
   const testPage = join(__dirname, 'testpage')
   const indexHtmlBytes = FS.readFileSync(join(testPage, 'index.html'))
   const imageBytes = FS.readFileSync(join(testPage, 'img', 'icon.png'))
-  const [indexReference, imageReference, haliReference] = await Promise.all([
+  const [indexReference, imageReference, textReference] = await Promise.all([
     bee.uploadData(process.env.BEE_POSTAGE, indexHtmlBytes),
     bee.uploadData(process.env.BEE_POSTAGE, imageBytes),
     bee.uploadData(process.env.BEE_POSTAGE, new Uint8Array([104, 97, 108, 105])),
@@ -69,7 +69,7 @@ it('should construct manifests of testpage folder', async () => {
     'Content-Type': 'text/html; charset=utf-8',
     Filename: 'index.html',
   })
-  iNode.addFork(utf8ToBytes('img/icon.png.txt'), hexToBytes(haliReference), {
+  iNode.addFork(utf8ToBytes('img/icon.png.txt'), hexToBytes(textReference), {
     'Content-Type': '', // FIXME: The bee node assigns empty string to Content Type in this case
     Filename: 'icon.png.txt',
   })
