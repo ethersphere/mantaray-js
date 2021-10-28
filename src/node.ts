@@ -552,7 +552,7 @@ export class MantarayNode {
   public deserialize(data: Uint8Array): void {
     const nodeHeaderSize = nodeHeaderSizes.full()
 
-    if (data.length < nodeHeaderSize) throw Error('serialised input too short')
+    if (data.length < nodeHeaderSize) throw Error('The serialised input is too short')
 
     this.obfuscationKey = new Uint8Array(data.slice(0, nodeHeaderSizes.obfuscationKey)) as Bytes<32>
     // perform XOR decryption on bytes after obfuscation key
@@ -566,7 +566,12 @@ export class MantarayNode {
     if (equalBytes(versionHash, serializeVersion('0.1'))) throw NotImplemented
     else if (equalBytes(versionHash, serializeVersion('0.2'))) {
       const refBytesSize = data[nodeHeaderSize - 1]
-      const entry = data.slice(nodeHeaderSize, nodeHeaderSize + refBytesSize)
+      let entry = data.slice(nodeHeaderSize, nodeHeaderSize + refBytesSize)
+
+      // FIXME: in Bee. if one uploads a file on the bzz endpoint, the node under `/` gets 0 refsize
+      if (refBytesSize === 0) {
+        entry = new Uint8Array(32)
+      }
       this.setEntry = entry as Reference
       let offset = nodeHeaderSize + refBytesSize
       const indexBytes = data.slice(offset, offset + 32) as Bytes<32>
