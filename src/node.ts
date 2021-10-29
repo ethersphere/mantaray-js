@@ -471,8 +471,6 @@ export class MantarayNode {
    * @returns Reference of the top manifest node.
    */
   public async save(storageSaver: StorageSaver): Promise<Reference> {
-    if (this.contentAddress) return this.contentAddress
-
     // save forks first recursively
     const savePromises: Promise<Reference>[] = []
 
@@ -481,6 +479,8 @@ export class MantarayNode {
       savePromises.push(fork.node.save(storageSaver))
     }
     await Promise.all(savePromises)
+
+    if (this.contentAddress) return this.contentAddress
 
     // save the actual manifest as well
     const data = this.serialize()
