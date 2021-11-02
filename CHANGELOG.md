@@ -1,5 +1,12 @@
 # Changelog
 
+### [1.0.4](https://www.github.com/ethersphere/mantaray-js/compare/v1.0.3...v1.0.4) (2021-11-02)
+
+
+### Bug Fixes
+
+* recursive save ([#28](https://www.github.com/ethersphere/mantaray-js/issues/28)) ([b293c04](https://www.github.com/ethersphere/mantaray-js/commit/b293c04c0e8ca0accf60d4ae8b763242d85cc1e2))
+
 ### [1.0.3](https://www.github.com/ethersphere/mantaray-js/compare/v1.0.2...v1.0.3) (2021-10-28)
 
 
