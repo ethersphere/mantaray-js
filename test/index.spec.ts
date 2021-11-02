@@ -111,8 +111,8 @@ it('should remove fork then upload it', async () => {
   expect(Object.keys(checkNode1.forks)).toStrictEqual([String(path1[13]), String(path2[13])])
   node.removePath(path2)
   const refDeleted = await node.save(saveFunction)
-  // root reference should remain the same
-  expect(refDeleted).toStrictEqual(refOriginal)
+  // root reference should not remain the same
+  expect(refDeleted).not.toStrictEqual(refOriginal)
   node.load(loadFunction, refDeleted)
   // 'm' key of prefix table disappeared
   const checkNode2 = getCheckNode()
@@ -120,4 +120,36 @@ it('should remove fork then upload it', async () => {
   // reference should differ because the changed fork set
   const refCheckNode2 = checkNode2.getContentAddress
   expect(refCheckNode2).not.toStrictEqual(refCheckNode1)
+})
+
+it('should modify the tree and call save on the mantaray root then load it back correctly', async () => {
+  const data = await beeTestPageManifestData()
+  const node = new MantarayNode()
+  node.deserialize(data)
+  await loadAllNodes(loadFunction, node)
+
+  // it modifies a node value and then 2 levels above a descendant node
+  const firstNode = node.forks[105].node
+  const descendantNode = firstNode.forks[109].node.forks[46].node
+  firstNode.setMetadata = {
+    ...firstNode.getMetadata,
+    additionalParam: 'first',
+  }
+  descendantNode.setMetadata = {
+    ...descendantNode.getMetadata,
+    additionalParam: 'second',
+  }
+
+  const reference = await node.save(saveFunction)
+  const nodeAgain = new MantarayNode()
+  await nodeAgain.load(loadFunction, reference)
+  await loadAllNodes(loadFunction, nodeAgain)
+  const firstNodeAgain = nodeAgain.forks[105].node
+  const descendantNodeAgain = firstNodeAgain.forks[109].node.forks[46].node
+
+  expect(firstNodeAgain.getMetadata).toStrictEqual(firstNode.getMetadata)
+  expect(firstNodeAgain.getMetadata['additionalParam']).toBe('first')
+  // fails if the save does not walk the whole tree
+  expect(descendantNodeAgain.getMetadata).toStrictEqual(descendantNode.getMetadata)
+  expect(descendantNodeAgain.getMetadata['additionalParam']).toBe('second')
 })

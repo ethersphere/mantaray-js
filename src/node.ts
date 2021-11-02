@@ -16,6 +16,7 @@ const PATH_SEPARATOR = '/'
 const PATH_SEPARATOR_BYTE = 47
 
 type ForkMapping = { [key: number]: MantarayFork }
+type RecursiveSaveReturnType = { reference: Reference; changed: boolean }
 
 const nodeForkSizes = {
   nodeType: 1,
@@ -467,26 +468,11 @@ export class MantarayNode {
   }
 
   /**
-   * Saves dirty flagged ManifestNode and its forks recursively
+   * Saves dirty flagged ManifestNodes and its forks recursively
    * @returns Reference of the top manifest node.
    */
   public async save(storageSaver: StorageSaver): Promise<Reference> {
-    if (this.contentAddress) return this.contentAddress
-
-    // save forks first recursively
-    const savePromises: Promise<Reference>[] = []
-
-    if (!this.forks) this.forks = {} // there were no intention to define fork(s)
-    for (const fork of Object.values(this.forks)) {
-      savePromises.push(fork.node.save(storageSaver))
-    }
-    await Promise.all(savePromises)
-
-    // save the actual manifest as well
-    const data = this.serialize()
-    const reference = await storageSaver(data)
-
-    this.setContentAddress = reference
+    const { reference } = await this.recursiveSave(storageSaver)
 
     return reference
   }
@@ -626,6 +612,29 @@ export class MantarayNode {
     } else {
       throw Error('Wrong mantaray version')
     }
+  }
+
+  private async recursiveSave(storageSaver: StorageSaver): Promise<RecursiveSaveReturnType> {
+    // save forks first recursively
+    const savePromises: Promise<RecursiveSaveReturnType>[] = []
+
+    if (!this.forks) this.forks = {} // there were no intention to define fork(s)
+    for (const fork of Object.values(this.forks)) {
+      savePromises.push(fork.node.recursiveSave(storageSaver))
+    }
+    const savedReturns = await Promise.all(savePromises)
+
+    if (this.contentAddress && savedReturns.every(v => !v.changed)) {
+      return { reference: this.contentAddress, changed: false }
+    }
+
+    // save the actual manifest as well
+    const data = this.serialize()
+    const reference = await storageSaver(data)
+
+    this.setContentAddress = reference
+
+    return { reference, changed: true }
   }
 }
 
