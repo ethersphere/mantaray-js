@@ -12,7 +12,9 @@
     "lint": "eslint --fix \"src/**/*.ts\" && prettier --write \"src/**/*.ts\"",
     "lint:check": "eslint \"src/**/*.ts\" && prettier --check \"src/**/*.ts\"",
     "check:types": "tsc --project tsconfig.json --skipLibCheck",
-    "test": "jest --verbose --config=jest.config.ts"
+    "test": "jest --verbose --selectProjects=node:unit node:integration --config=jest.config.ts",
+    "test:unit": "jest --verbose --selectProjects=node:unit --config=jest.config.ts ",
+    "test:integration": "jest --verbose --selectProjects=node:integration --config=jest.config.ts"
   },
   "keywords": [
     "mantaray",
