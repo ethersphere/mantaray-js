@@ -1,4 +1,4 @@
-export const marshalVersionValues = ['0.1', '0.2'] as const
+export const marshalVersionValues = ['0.1', '0.2', '1.0'] as const
 
 export type MarshalVersion = typeof marshalVersionValues[number]
 
