@@ -1,11 +1,12 @@
-import { equalNodes, MantarayNode } from '../src/node'
+import { MarshalVersion, MantarayNode, Mantaray0_2, Mantaray1_0 } from '../src'
 import { gen32Bytes } from '../src/utils'
 
 declare global {
   // eslint-disable-next-line @typescript-eslint/no-namespace
   namespace jest {
     interface Matchers<R> {
-      toBeEqualNode(compareTo: MantarayNode): R
+      toBeEqualNode0_2(compareTo: Mantaray0_2.MantarayNode): R
+      toBeEqualNode1_0(compareTo: Mantaray1_0.MantarayNode): R
     }
   }
 }
@@ -15,14 +16,29 @@ declare global {
  */
 export function commonMatchers(): void {
   expect.extend({
-    toBeEqualNode(received: MantarayNode, compareTo: MantarayNode) {
+    toBeEqualNode0_2(received: MantarayNode<'0.2'>, compareTo: MantarayNode<'0.2'>) {
       const result = {
         pass: true,
         message: () => 'Given Manatary nodes are equal',
       }
 
       try {
-        equalNodes(received, compareTo)
+        Mantaray0_2.equalNodes(received, compareTo)
+      } catch (e) {
+        result.pass = false
+        result.message = () => e.message
+      }
+
+      return result
+    },
+    toBeEqualNode1_0(received: MantarayNode<'1.0'>, compareTo: MantarayNode<'1.0'>) {
+      const result = {
+        pass: true,
+        message: () => 'Given Manatary nodes are equal',
+      }
+
+      try {
+        Mantaray1_0.equalNodes(received, compareTo)
       } catch (e) {
         result.pass = false
         result.message = () => e.message
@@ -33,8 +49,14 @@ export function commonMatchers(): void {
   })
 }
 
-export function getSampleMantarayNode(): { node: MantarayNode; paths: Uint8Array[] } {
-  const node = new MantarayNode()
+export function getSampleMantarayNode<Version extends MarshalVersion>(version: Version): { node: MantarayNode<Version>; paths: Uint8Array[] } {
+  let node: MantarayNode<Version>
+  switch(version) {
+    case '1.0':
+      node = new Mantaray1_0.MantarayNode() as MantarayNode<Version>
+    case '0.2':
+      node = new Mantaray0_2.MantarayNode() as MantarayNode<Version>
+  }
   const randAddress = gen32Bytes()
   node.setEntry = randAddress
   const path1 = new TextEncoder().encode('path1/valami/elso')
