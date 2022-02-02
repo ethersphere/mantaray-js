@@ -9,6 +9,7 @@ import {
   fromBigEndian,
   IndexBytes,
   keccak256Hash,
+  serializeVersion,
   toBigEndianFromUint16,
 } from './utils'
 
@@ -653,17 +654,6 @@ export function checkForSeparator(node: MantarayNode): boolean {
   }
 
   return false
-}
-
-/**
- * The hash length has to be 31 instead of 32 that comes from the keccak hash function
- */
-function serializeVersion(version: MarshalVersion): Bytes<31> {
-  const versionName = 'mantaray'
-  const versionSeparator = ':'
-  const hashBytes = keccak256Hash(versionName + versionSeparator + version)
-
-  return hashBytes.slice(0, 31) as Bytes<31>
 }
 
 function serializeReferenceLength(entry: Reference): Bytes<1> {

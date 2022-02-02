@@ -1,7 +1,7 @@
 import getRandomValues from 'get-random-values'
 import type { Message } from 'js-sha3'
 import { keccak256 } from 'js-sha3'
-import { Bytes, Reference } from './types'
+import { Bytes, MarshalVersion, Reference } from './types'
 
 export function checkReference(ref: Reference): void | never {
   if (!(ref instanceof Uint8Array)) {
@@ -191,4 +191,15 @@ export class IndexBytes {
       }
     }
   }
+}
+
+/**
+ * The hash length has to be 31 instead of 32 that comes from the keccak hash function
+ */
+export function serializeVersion(version: MarshalVersion): Bytes<31> {
+  const versionName = 'mantaray'
+  const versionSeparator = ':'
+  const hashBytes = keccak256Hash(versionName + versionSeparator + version)
+
+  return hashBytes.slice(0, 31) as Bytes<31>
 }
