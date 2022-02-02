@@ -1,10 +1,9 @@
 import { Bee, Utils } from '@ethersphere/bee-js'
 import FS from 'fs'
 import { join } from 'path'
-import { MantarayNode } from '../src'
-import { loadAllNodes } from '../src/node'
-import type { Reference } from '../src/types'
-import { commonMatchers, getSampleMantarayNode } from './utils'
+import { loadAllNodes, MantarayNode } from '../../src/node'
+import type { Reference } from '../../src/types'
+import { commonMatchers, getSampleMantarayNode } from '../utils'
 
 commonMatchers()
 const beeUrl = process.env.BEE_API_URL || 'http://localhost:1633'
@@ -87,15 +86,15 @@ it('should construct manifests of testpage folder', async () => {
   iNodeAgain.deserialize(marshal)
   await loadAllNodes(loadFunction, iNodeAgain)
   // check after serialization the object is same
-  expect(iNode).toBeEqualNode(iNodeAgain)
+  expect(iNode).toBeEqualNode0_2(iNodeAgain)
   // check bee manifest is equal with the constructed one.
-  expect(iNode).toBeEqualNode(node)
+  expect(iNode).toBeEqualNode0_2(node)
   // eslint-disable-next-line no-console
   console.log('Constructed root manifest hash', Utils.Hex.bytesToHex(iNodeRef))
 })
 
 it('should remove fork then upload it', async () => {
-  const sampleNode = getSampleMantarayNode()
+  const sampleNode = getSampleMantarayNode('0.2')
   const node = sampleNode.node
   const path1 = sampleNode.paths[0]
   const path2 = sampleNode.paths[1]
