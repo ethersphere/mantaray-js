@@ -1,15 +1,35 @@
-import { MantarayNode } from './node'
-import { Bytes } from './types'
+import { MantarayNode as MantarayNode0_2 } from './node'
+import { MantarayNode as MantarayNode1_0 } from './node-1_0'
+import { Bytes, MarshalVersion } from './types'
 import { gen32Bytes } from './utils'
 
 /** On the returned Mantaray node you can set either its entry or add fork to it */
-export function initManifestNode(options?: { obfuscationKey?: Bytes<32> }): MantarayNode {
-  const manifestNode = new MantarayNode()
-  manifestNode.setObfuscationKey = options?.obfuscationKey || gen32Bytes()
-
-  return manifestNode
+export function initManifestNode(options?: { obfuscationKey?: Bytes<32>, version?: MarshalVersion }): MantarayNode0_2 | MantarayNode1_0 {
+  const obfuscationKey: Bytes<32> = options?.obfuscationKey || gen32Bytes()
+  const version: MarshalVersion = options?.version ? options!.version : '1.0'
+  switch(version) {
+    case '0.2':
+      const manifestNode0_2 = new MantarayNode0_2()
+      manifestNode0_2.setObfuscationKey = obfuscationKey
+      
+      return manifestNode0_2
+    case '1.0':
+      const manifestNode1_0 = new MantarayNode1_0()
+      manifestNode1_0.setObfuscationKey = obfuscationKey
+      
+      return manifestNode1_0
+    default:
+      throw new Error('Not implemented')
+  }
 }
 
-export * from './node'
+export type MantarayNode<Version extends MarshalVersion | undefined = undefined> = 
+  Version extends '0.2' ? MantarayNode0_2 : 
+  Version extends '1.0' ? MantarayNode1_0 : 
+  Version extends undefined ? MantarayNode0_2 | MantarayNode1_0 : 
+  never
+
+export * as Mantaray0_2 from './node'
 export * from './types'
 export * as Utils from './utils'
+export * as Mantaray1_0 from './node-1_0'
