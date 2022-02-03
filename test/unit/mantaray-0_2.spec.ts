@@ -1,7 +1,7 @@
 import { initManifestNode, Mantaray0_2 } from '../../src'
 import { checkForSeparator } from '../../src/node'
 import { gen32Bytes } from '../../src/utils'
-import { getSampleMantarayNode } from '../utils'
+import { getSampleMantarayNode0_2 } from '../utils'
 
 const { MantarayNode } = Mantaray0_2
 
@@ -17,7 +17,7 @@ describe('Mantaray 0.2 Unit Tests', () => {
   })
   
   it('tests getForkAtPath method of node and checkForSeparator function', () => {
-    const sampleNode = getSampleMantarayNode('0.2')
+    const sampleNode = getSampleMantarayNode0_2()
     const node = sampleNode.node
     expect(() => node.getForkAtPath(new TextEncoder().encode('path/not/exists'))).toThrowError()
   
@@ -42,7 +42,7 @@ describe('Mantaray 0.2 Unit Tests', () => {
   })
   
   it('checks the expected structure of the sample mantaray node', () => {
-    const sampleNode = getSampleMantarayNode('0.2')
+    const sampleNode = getSampleMantarayNode0_2()
     const node = sampleNode.node
     const path1 = sampleNode.paths[0]
     const path2 = sampleNode.paths[1]
@@ -73,7 +73,7 @@ describe('Mantaray 0.2 Unit Tests', () => {
   })
   
   it('should remove forks', () => {
-    const sampleNode = getSampleMantarayNode('0.2')
+    const sampleNode = getSampleMantarayNode0_2()
     const node = sampleNode.node
     // save sample node
     const path1 = sampleNode.paths[0]

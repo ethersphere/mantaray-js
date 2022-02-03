@@ -1,5 +1,8 @@
-import { MarshalVersion, MantarayNode, Mantaray0_2, Mantaray1_0 } from '../src'
+import { Utils } from '@ethersphere/bee-js'
+import { MarshalVersion, MantarayNode, Mantaray0_2, Mantaray1_0, Reference, MetadataMapping } from '../src'
 import { gen32Bytes } from '../src/utils'
+
+const { hexToBytes } = Utils.Hex
 
 declare global {
   // eslint-disable-next-line @typescript-eslint/no-namespace
@@ -49,14 +52,8 @@ export function commonMatchers(): void {
   })
 }
 
-export function getSampleMantarayNode<Version extends MarshalVersion>(version: Version): { node: MantarayNode<Version>; paths: Uint8Array[] } {
-  let node: MantarayNode<Version>
-  switch(version) {
-    case '1.0':
-      node = new Mantaray1_0.MantarayNode() as MantarayNode<Version>
-    case '0.2':
-      node = new Mantaray0_2.MantarayNode() as MantarayNode<Version>
-  }
+export function getSampleMantarayNode0_2(): { node: MantarayNode<'0.2'>; paths: Uint8Array[] } {
+  let node: MantarayNode<'0.2'> = new Mantaray0_2.MantarayNode()
   const randAddress = gen32Bytes()
   node.setEntry = randAddress
   const path1 = new TextEncoder().encode('path1/valami/elso')
@@ -73,5 +70,61 @@ export function getSampleMantarayNode<Version extends MarshalVersion>(version: V
   return {
     node,
     paths: [path1, path2, path3, path4, path5],
+  }
+}
+
+type SampleFork1_0 = { 
+  path: Uint8Array, 
+  entry?: Reference, 
+  nodeMetadata?: MetadataMapping,
+  forkMetadata?: MetadataMapping
+}
+
+type SampleForks1_0 = {
+  fork1: SampleFork1_0,
+  fork2: SampleFork1_0,
+  fork3: SampleFork1_0,
+  fork4: SampleFork1_0,
+  fork5: SampleFork1_0,
+}
+
+export function getSampleMantarayNode1_0(): { node: MantarayNode<'1.0'>; forks: SampleForks1_0 } {
+  const node: MantarayNode<'1.0'> = new Mantaray1_0.MantarayNode()
+  const forks: SampleForks1_0 = {
+    fork1: {
+      path: new TextEncoder().encode('path1/valami/elso'),
+      entry: hexToBytes<32>('7d4ccc856f51d0477fde68f9f06bca97c6cd3b4a86b3369ea6489ceaf7b31557'),
+      forkMetadata: { vmi: 'elso' },
+    },
+    fork2: {
+      path: new TextEncoder().encode('path1/valami/masodik'),
+      entry: hexToBytes<32>('4a07606f59562544dd37d26a219a65144e8cf3321b21276d8ea8de4af3ecee63'),
+    },
+    fork3: {
+      path: new TextEncoder().encode('path1/valami/masodik.ext'),
+      entry: hexToBytes<32>('4b39e4560b007ec369c651d7d85080f2de4177d7e4b14bf988bb353fe1faa244'),
+    },
+    fork4: {
+      path: new TextEncoder().encode('path1/valami'),
+      nodeMetadata: { vmi: 'negy' }
+    },
+    fork5: {
+      path: new TextEncoder().encode('path2'),
+    },
+  }
+  for(const fork of Object.values(forks)) {
+    node.addFork(
+      fork.path, 
+      { 
+        entry: fork.entry, 
+        nodeMetadata: fork.nodeMetadata,
+        forkMetadata: fork.forkMetadata,
+      }
+    )
+  }
+
+  return {
+    node,
+    forks,
   }
 }
