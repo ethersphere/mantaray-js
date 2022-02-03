@@ -1,4 +1,4 @@
-import { Bytes, MarshalVersion, MetadataMapping, NodeType, Reference, StorageLoader, StorageSaver } from './types'
+import { Bytes, MarshalVersion, MetadataMapping, Reference, StorageLoader, StorageSaver } from './types'
 import {
   checkReference,
   common,
@@ -6,11 +6,9 @@ import {
   equalBytes,
   findIndexOfArray,
   flattenBytesArray,
-  fromBigEndian,
   gen32Bytes,
   IndexBytes,
   serializeVersion,
-  toBigEndianFromUint16,
 } from './utils'
 
 type ForkMapping = { [key: number]: MantarayFork }
@@ -252,24 +250,6 @@ export class MantarayNode {
     return Object.keys(this.nodeMetadata || {}).length > 0
   }
 
-  /// Other Utility methods
-
-  /** byte length until the fork array */
-  public nodeHeaderSize(): number {
-    let size = 64 // obfuscationKey (32) + versionHash (31) + nodeFeatures (1)
-    if(this.hasEntry) {
-      size += 32
-      if(this.encEntry) {
-        size += 32
-      }
-    }
-    if(this.isEdge) {
-      size += 32
-    }
-
-    return size
-  }
-
   /// BL methods
 
   public addFork(
@@ -509,26 +489,6 @@ export class MantarayNode {
     return bytes
   }
 
-  public serializeFeatures(): Bytes<1> {
-    if (this.encEntry && !this.hasEntry) {
-      throw new Error('encEntry is true when hasEntry is false at serialisation')
-    }
-
-    let nodeFeautes = this.forkMetadataSegmentSize
-    // add flags
-    nodeFeautes = nodeFeautes << 1
-    nodeFeautes += this.isEdge ? 1 : 0
-    nodeFeautes = nodeFeautes << 1
-    nodeFeautes += this.encEntry ? 1 : 0
-    nodeFeautes = nodeFeautes << 1
-    nodeFeautes += this.hasEntry ? 1 : 0
-
-    const bytes = new Uint8Array(1) as Bytes<1>
-    bytes[0] = nodeFeautes
-
-    return bytes
-  }
-
   public deserialize(data: Uint8Array): void {
     /// Header
     const nodeHeaderSize = nodeHeaderSizes.full()
@@ -599,7 +559,27 @@ export class MantarayNode {
     }
   }
 
-  public deserializeFeatures(nodeFeaturesByte: number) {
+  private serializeFeatures(): Bytes<1> {
+    if (this.encEntry && !this.hasEntry) {
+      throw new Error('encEntry is true when hasEntry is false at serialisation')
+    }
+
+    let nodeFeautes = this.forkMetadataSegmentSize
+    // add flags
+    nodeFeautes = nodeFeautes << 1
+    nodeFeautes += this.isEdge ? 1 : 0
+    nodeFeautes = nodeFeautes << 1
+    nodeFeautes += this.encEntry ? 1 : 0
+    nodeFeautes = nodeFeautes << 1
+    nodeFeautes += this.hasEntry ? 1 : 0
+
+    const bytes = new Uint8Array(1) as Bytes<1>
+    bytes[0] = nodeFeautes
+
+    return bytes
+  }
+
+  private deserializeFeatures(nodeFeaturesByte: number) {
     // deserialize flags
     this.hasEntry = nodeFeaturesByte % 2 === 1
     nodeFeaturesByte = nodeFeaturesByte >> 1
