@@ -206,5 +206,6 @@ export function serializeVersion(version: MarshalVersion): Bytes<31> {
 
 export function serializeMetadata(metadata: MetadataMapping): Uint8Array {
   const jsonString = JSON.stringify(metadata)
+
   return new TextEncoder().encode(jsonString)
 }

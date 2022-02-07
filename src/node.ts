@@ -8,7 +8,6 @@ import {
   flattenBytesArray,
   fromBigEndian,
   IndexBytes,
-  keccak256Hash,
   serializeVersion,
   toBigEndianFromUint16,
 } from './utils'
