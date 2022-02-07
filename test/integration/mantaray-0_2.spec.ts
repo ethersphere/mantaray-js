@@ -3,7 +3,7 @@ import FS from 'fs'
 import { join } from 'path'
 import { loadAllNodes, MantarayNode } from '../../src/node'
 import type { Reference } from '../../src/types'
-import { commonMatchers, getSampleMantarayNode } from '../utils'
+import { commonMatchers, getSampleMantarayNode0_2 } from '../utils'
 
 commonMatchers()
 const beeUrl = process.env.BEE_API_URL || 'http://localhost:1633'
@@ -94,7 +94,7 @@ it('should construct manifests of testpage folder', async () => {
 })
 
 it('should remove fork then upload it', async () => {
-  const sampleNode = getSampleMantarayNode('0.2')
+  const sampleNode = getSampleMantarayNode0_2()
   const node = sampleNode.node
   const path1 = sampleNode.paths[0]
   const path2 = sampleNode.paths[1]
@@ -147,8 +147,8 @@ it('should modify the tree and call save on the mantaray root then load it back 
   const descendantNodeAgain = firstNodeAgain.forks[109].node.forks[46].node
 
   expect(firstNodeAgain.getMetadata).toStrictEqual(firstNode.getMetadata)
-  expect(firstNodeAgain.getMetadata['additionalParam']).toBe('first')
+  expect(firstNodeAgain.getMetadata.additionalParam).toBe('first')
   // fails if the save does not walk the whole tree
   expect(descendantNodeAgain.getMetadata).toStrictEqual(descendantNode.getMetadata)
-  expect(descendantNodeAgain.getMetadata['additionalParam']).toBe('second')
+  expect(descendantNodeAgain.getMetadata.additionalParam).toBe('second')
 })
