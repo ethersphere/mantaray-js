@@ -8,6 +8,7 @@ import {
   flattenBytesArray,
   gen32Bytes,
   IndexBytes,
+  serializeMetadata,
   serializeVersion,
 } from './utils'
 
@@ -76,17 +77,14 @@ export class MantarayFork {
    * @param prefix the non-branching part of the subpath
    * @param node in memory structure that represents the Node
    */
-  constructor(public prefix: Uint8Array, public node: MantarayNode, public forkMetadata: MetadataMapping = {}) {}
+  constructor(public prefix: Uint8Array, public node: MantarayNode) {}
 
-  public getMetadata(): MetadataMapping {
-    return {
-      ...this.forkMetadata,
-      ...this.node.getNodeMetadata,
-    }
-  }
-
-  /** The obfuscation on the data happens in node serialisation */
-  public serialize(): Uint8Array {
+  /** 
+   * The obfuscation on the data happens in node serialisation 
+   * @forkMetadata metadata about the node on the fork level. The segmentsize is the reserved byte length devided by 32
+   */
+  public serialize(segmentSize = 0): Uint8Array {
+    const metadata = this.node.forkMetadata
     const prefixLengthBytes = new Uint8Array(1)
     prefixLengthBytes[0] = this.prefix.length // on addFork it is always trimmed under `prefixMax`
 
@@ -99,9 +97,9 @@ export class MantarayFork {
 
     const data = new Uint8Array([...prefixLengthBytes, ...prefixBytes, ...entry])
 
-    if (this.node.getForkMetadataSegmentSize > 0) {
-      const jsonString = JSON.stringify(this.forkMetadata)
-      const metadataBytes = new Uint8Array(this.node.getForkMetadataSegmentSize * 32)
+    if (segmentSize > 0) {
+      const jsonString = JSON.stringify(metadata)
+      const metadataBytes = new Uint8Array(segmentSize * 32)
       metadataBytes.set(new TextEncoder().encode(jsonString))
 
       return new Uint8Array([...data, ...metadataBytes])
@@ -125,11 +123,10 @@ export class MantarayFork {
     const fork = new MantarayFork(prefix, node)
     const entryLength = encEntry ? 64 : 32
     node.setContentAddress = data.slice(nodeForkSizes.preReference, nodeForkSizes.preReference + entryLength) as Bytes<32> | Bytes<64>
-    
     const metadataBytes = data.slice(nodeForkSizes.preReference + entryLength)
     if (metadataBytes.length > 0) {
       const jsonString = new TextDecoder().decode(metadataBytes)
-      fork.forkMetadata = JSON.parse(jsonString)
+      node.forkMetadata = JSON.parse(jsonString)
     }
 
     return fork
@@ -148,9 +145,14 @@ export class MantarayNode {
   private contentAddress?: Reference
   /** reference of a content that the manifest refers to */
   private entry?: Reference
-  private nodeMetadata?: MetadataMapping
+  private _nodeMetadata?: MetadataMapping
+  /** 
+   * metadata about the node sersialised on the fork level.
+   * handled here, because of trie structure rearrangements on `addFork` 
+   */
+  private _forkMetadata?: MetadataMapping
   /** this value * the segment size (32) gives the reserved bytesize for metadata under each forkdata */
-  private forkMetadataSegmentSize: number
+  private _forkMetadataSegmentSize: number
   /** 
    * whether the node act as a continuous node because the childnode prefix is too long
    * information requires parent node fetch
@@ -163,8 +165,8 @@ export class MantarayNode {
     this.hasEntry = false
     this.encEntry = false
     this.isEdge = false
-    this.isContinuousNode = true
-    this.forkMetadataSegmentSize = 0
+    this.isContinuousNode = false
+    this._forkMetadataSegmentSize = 0
     this.obfuscationKey = new Uint8Array(32) as Bytes<32>
   }
 
@@ -198,13 +200,19 @@ export class MantarayNode {
     this.makeDirty()
   }
 
-  public set setNodeMetadata(metadata: MetadataMapping) {
-    this.nodeMetadata = metadata
+  public set nodeMetadata(metadata: MetadataMapping | undefined) {
+    this._nodeMetadata = metadata
     this.makeDirty()
   }
 
-  public set setForkMetadataSegmentSize(value: number) {
+  public set forkMetadata(metadata: MetadataMapping | undefined) {
+    this._forkMetadata = metadata
+    this.makeDirty()
+  }
+
+  public set forkMetadataSegmentSize(value: number) {
     if (value > 31) throw new Error(`forkMetadataSegmentSize is greater than 31. Got: ${value}`)
+    this._forkMetadataSegmentSize = value
   }
 
   public get getObfuscationKey(): Bytes<32> | undefined {
@@ -219,12 +227,8 @@ export class MantarayNode {
     return this.contentAddress
   }
 
-  public get getNodeMetadata(): MetadataMapping | undefined {
-    return this.nodeMetadata
-  }
-
-  public get getForkMetadataSegmentSize(): number {
-    return this.forkMetadataSegmentSize
+  public get nodeMetadata(): MetadataMapping | undefined {
+    return this._nodeMetadata
   }
 
   public get getIsEdge(): boolean {
@@ -239,6 +243,23 @@ export class MantarayNode {
     return this.encEntry
   }
 
+  public get metadata(): MetadataMapping | undefined {
+    if(!this._forkMetadata && !this._nodeMetadata) return undefined
+
+    return {
+      ...this.nodeMetadata,
+      ...this._forkMetadata,
+    }
+  }
+
+  public get forkMetadata(): MetadataMapping | undefined {
+    return this._forkMetadata
+  }
+
+  public get forkMetadataSegmentSize(): number {
+    return this._forkMetadataSegmentSize
+  }
+
   /// Node type related functions
   /// dirty flag is not necessary to be set
 
@@ -246,8 +267,12 @@ export class MantarayNode {
     return this.hasEntry
   }
 
+  /** 
+   * The node either has metadata on node level or fork level 
+   * for forkMetadata parent node has to be fetched
+   */
   public isWithMetadataType(): boolean {
-    return Object.keys(this.nodeMetadata || {}).length > 0
+    return Boolean(this._forkMetadata) || Boolean(this._nodeMetadata)
   }
 
   /// BL methods
@@ -258,19 +283,24 @@ export class MantarayNode {
       entry?: Reference, 
       nodeMetadata?: MetadataMapping, 
       forkMetadata?: MetadataMapping,
+      autoForkMetadataSize?: boolean,
     }): void
   {
     const entry: Reference | undefined = attributes?.entry
-    const nodeMetadata: MetadataMapping = attributes?.nodeMetadata || {}
-    const forkMetadata: MetadataMapping = attributes?.forkMetadata || {}
-    //TODO handle forkmetadata
+    const nodeMetadata: MetadataMapping | undefined = attributes?.nodeMetadata
+    const forkMetadata: MetadataMapping | undefined = attributes?.forkMetadata
+    const autoForkMetadataSize = attributes?.autoForkMetadataSize
+    if(autoForkMetadataSize && forkMetadata) {
+      const metadataBytes = serializeMetadata(forkMetadata)
+      this.forkMetadataSegmentSize = Math.ceil(metadataBytes.length / 32)
+    }
+    this.checkForkMetadataSegmentSize(forkMetadata)
 
     if (path.length === 0) {
       if(entry) this.setEntry = entry
 
-      if (Object.keys(nodeMetadata).length > 0) {
-        this.setNodeMetadata = nodeMetadata
-      }
+      this.nodeMetadata = nodeMetadata
+      this.forkMetadata = forkMetadata
 
       return
     }
@@ -294,7 +324,7 @@ export class MantarayNode {
         const rest = path.slice(nodeForkSizes.prefixMax)
         newNode.addFork(rest, attributes)
         newNode.isContinuousNode = true
-        this.forks[path[0]] = new MantarayFork(prefix, newNode, forkMetadata)
+        this.forks[path[0]] = new MantarayFork(prefix, newNode)
         this.isEdge = true
         this.makeDirty()
 
@@ -303,11 +333,10 @@ export class MantarayNode {
       // create non-continuous node
       if(entry) newNode.setEntry = entry
 
-      if (Object.keys(nodeMetadata).length > 0) {
-        newNode.setNodeMetadata = nodeMetadata
-      }
+      newNode.forkMetadata = forkMetadata
+      newNode.nodeMetadata = nodeMetadata
 
-      this.forks[path[0]] = new MantarayFork(path, newNode, forkMetadata)
+      this.forks[path[0]] = new MantarayFork(path, newNode)
       this.makeDirty()
       this.isEdge = true
 
@@ -329,7 +358,7 @@ export class MantarayNode {
       newNode.setObfuscationKey = this.obfuscationKey ? gen32Bytes() : new Uint8Array(32) as Bytes<32>
       newNode.forks = {}
       //TODO handle continuous node (shorten path)
-      newNode.forks[restPath[0]] = new MantarayFork(restPath, fork.node, forkMetadata) // copy old parent node to its remaining path
+      newNode.forks[restPath[0]] = new MantarayFork(restPath, fork.node) // copy old parent node to its remaining path
       newNode.isEdge = true
     }
 
@@ -337,7 +366,7 @@ export class MantarayNode {
     // newNode will be the common path edge node
     // newNode's prefix is a subset of the given `path`, here the desired fork will be added with the truncated path
     newNode.addFork(path.slice(commonPath.length), attributes)
-    this.forks[path[0]] = new MantarayFork(commonPath, newNode, forkMetadata)
+    this.forks[path[0]] = new MantarayFork(commonPath, newNode)
     this.isEdge = true
 
     this.makeDirty()
@@ -461,14 +490,14 @@ export class MantarayNode {
         const fork = this.forks![byte]
 
         if (!fork) throw Error(`Fork indexing error: fork has not found under ${byte} index`)
-        forkSerializations.push(fork.serialize())
+        forkSerializations.push(fork.serialize(this.forkMetadataSegmentSize))
       })
     }
 
     /// NodeMetadata
     let nodeMetadataBytes = new Uint8Array(0)
-    if (this.nodeMetadata) {
-      const jsonString = JSON.stringify(this.nodeMetadata)
+    if (this._nodeMetadata) {
+      const jsonString = JSON.stringify(this._nodeMetadata)
       nodeMetadataBytes = new TextEncoder().encode(jsonString)
     }
 
@@ -533,7 +562,7 @@ export class MantarayNode {
 
       /// Forks
       this.forks = {}
-      const forkSize = nodeForkSizes.preReference + refBytesSize + this.forkMetadataSegmentSize * 32
+      const forkSize = nodeForkSizes.preReference + refBytesSize + this._forkMetadataSegmentSize * 32
       indexForks.forEach(byte => {
         if (data.length < offset + forkSize) {
           throw Error(`There is not enough size to read fork data at offset ${offset}`)
@@ -552,9 +581,19 @@ export class MantarayNode {
     if (data.length > offset) {
       const jsonString = new TextDecoder().decode(data.slice(offset))
       try {
-        this.nodeMetadata = JSON.parse(jsonString)
+        this._nodeMetadata = JSON.parse(jsonString)
       } catch(e) {
         throw new Error(`The byte array is not a valid JSON object in the Mantaray object`)
+      }
+    }
+  }
+
+  private checkForkMetadataSegmentSize(forkMetadata: MetadataMapping | undefined): void {
+    if (forkMetadata) {
+      const metadataBytes = serializeMetadata(forkMetadata)
+      if(metadataBytes.length > this._forkMetadataSegmentSize * 32) {
+        throw new Error(`passed forkMetadata byte length ${metadataBytes.length} is bigger` 
+         + ` than the allowed fork metadata size ${this._forkMetadataSegmentSize * 32}`)
       }
     }
   }
@@ -564,7 +603,7 @@ export class MantarayNode {
       throw new Error('encEntry is true when hasEntry is false at serialisation')
     }
 
-    let nodeFeautes = this.forkMetadataSegmentSize
+    let nodeFeautes = this._forkMetadataSegmentSize
     // add flags
     nodeFeautes = nodeFeautes << 1
     nodeFeautes += this.isEdge ? 1 : 0
@@ -589,7 +628,7 @@ export class MantarayNode {
     nodeFeaturesByte = nodeFeaturesByte >> 1
 
     // deserialize segmentsize
-    this.setForkMetadataSegmentSize = nodeFeaturesByte
+    this.forkMetadataSegmentSize = nodeFeaturesByte
   }
 
   private async recursiveSave(storageSaver: StorageSaver): Promise<RecursiveSaveReturnType> {
@@ -648,14 +687,14 @@ export const equalNodes = (a: MantarayNode, b: MantarayNode, accumulatedPrefix =
   if (a.getIsEdge !== b.getIsEdge) {
     throw new Error(`Nodes do not have same isEdge flags: a ${a.getIsEdge} ; b: ${b.getIsEdge}`)
   }
-  if(a.getForkMetadataSegmentSize !== b.getForkMetadataSegmentSize) {
-    throw new Error(`Nodes do not have same forkMetadataSegmentSize: a ${a.getForkMetadataSegmentSize} ; b: ${b.getForkMetadataSegmentSize}`)
+  if(a.forkMetadataSegmentSize !== b.forkMetadataSegmentSize) {
+    throw new Error(`Nodes do not have same forkMetadataSegmentSize: a ${a.forkMetadataSegmentSize} ; b: ${b.forkMetadataSegmentSize}`)
   }
 
   // node metadata comparisation
-  if (!a.getNodeMetadata !== !b.getNodeMetadata) {
-    throw Error(`One of the nodes do not have metadata defined. \n a: ${a.getNodeMetadata} \n b: ${b.getNodeMetadata}`)
-  } else if (a.getNodeMetadata && b.getNodeMetadata) {
+  if (!a.nodeMetadata !== !b.nodeMetadata) {
+    throw Error(`One of the nodes do not have metadata defined. \n a: ${a.nodeMetadata} \n b: ${b.nodeMetadata}`)
+  } else if (a.nodeMetadata && b.nodeMetadata) {
     //TODO deep equation
   }
 
