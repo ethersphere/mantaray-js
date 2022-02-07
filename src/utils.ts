@@ -1,7 +1,7 @@
 import getRandomValues from 'get-random-values'
 import type { Message } from 'js-sha3'
 import { keccak256 } from 'js-sha3'
-import { Bytes, MarshalVersion, Reference } from './types'
+import { Bytes, MarshalVersion, MetadataMapping, Reference } from './types'
 
 export function checkReference(ref: Reference): void | never {
   if (!(ref instanceof Uint8Array)) {
@@ -202,4 +202,9 @@ export function serializeVersion(version: MarshalVersion): Bytes<31> {
   const hashBytes = keccak256Hash(versionName + versionSeparator + version)
 
   return hashBytes.slice(0, 31) as Bytes<31>
+}
+
+export function serializeMetadata(metadata: MetadataMapping): Uint8Array {
+  const jsonString = JSON.stringify(metadata)
+  return new TextEncoder().encode(jsonString)
 }
