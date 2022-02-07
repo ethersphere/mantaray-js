@@ -704,7 +704,7 @@ export const equalNodes = (a: MantarayNode, b: MantarayNode, accumulatedPrefix =
   }
 
   // node entry comparisation
-  if (equalBytes(a.getEntry || new Uint8Array(0), b.getEntry || new Uint8Array(0))) {
+  if (!equalBytes(a.getEntry || new Uint8Array(0), b.getEntry || new Uint8Array(0))) {
     throw Error(`Nodes do not have same entries. \n a: ${a.getEntry} \n b: ${a.getEntry}`)
   }
 
