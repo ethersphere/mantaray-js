@@ -81,10 +81,15 @@ type SampleFork1_0 = {
 }
 
 type SampleForks1_0 = {
+  /** encrypted entry with forkMetadata */
   fork1: SampleFork1_0,
+  /** edge node with reference */
   fork2: SampleFork1_0,
+  /** leaf node with nodeMetadata without reference */
   fork3: SampleFork1_0,
+  /** edge node without reference with node and forkMetadata  */
   fork4: SampleFork1_0,
+  /** standalone/empty leaf node */
   fork5: SampleFork1_0,
 }
 
@@ -93,7 +98,7 @@ export function getSampleMantarayNode1_0(): { node: MantarayNode<'1.0'>; forks: 
   const forks: SampleForks1_0 = {
     fork1: {
       path: new TextEncoder().encode('path1/valami/elso'),
-      entry: hexToBytes<32>('7d4ccc856f51d0477fde68f9f06bca97c6cd3b4a86b3369ea6489ceaf7b31557'),
+      entry: hexToBytes<32>('7d4ccc856f51d0477fde68f9f06bca97c6cd3b4a86b3369ea6489ceaf7b315577d4ccc856f51d0477fde68f9f06bca97c6cd3b4a86b3369ea6489ceaf7b31557'),
       forkMetadata: { vmi: 'elso' },
     },
     fork2: {
@@ -102,11 +107,12 @@ export function getSampleMantarayNode1_0(): { node: MantarayNode<'1.0'>; forks: 
     },
     fork3: {
       path: new TextEncoder().encode('path1/valami/masodik.ext'),
-      entry: hexToBytes<32>('4b39e4560b007ec369c651d7d85080f2de4177d7e4b14bf988bb353fe1faa244'),
+      nodeMetadata: { vmi2: 'harmadik' },
     },
     fork4: {
       path: new TextEncoder().encode('path1/valami'),
-      nodeMetadata: { vmi: 'negy' }
+      forkMetadata: { vmi: 'negy'},
+      nodeMetadata: { vmi: 'negy!', vmi2: 123 }
     },
     fork5: {
       path: new TextEncoder().encode('path2'),
@@ -119,6 +125,7 @@ export function getSampleMantarayNode1_0(): { node: MantarayNode<'1.0'>; forks: 
         entry: fork.entry, 
         nodeMetadata: fork.nodeMetadata,
         forkMetadata: fork.forkMetadata,
+        autoForkMetadataSize: true,
       }
     )
   }

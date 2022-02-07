@@ -4,14 +4,21 @@ import { getSampleMantarayNode1_0 } from '../utils'
 
 const { MantarayNode } = Mantaray1_0
 
+/** Used for checking correct serialisation of the node */
+function serialiseDeserialise(node: Mantaray1_0.MantarayNode): Mantaray1_0.MantarayNode {
+  const serialized = node.serialize()
+  const nodeAgain = new MantarayNode()
+  nodeAgain.deserialize(serialized)
+
+  return nodeAgain
+}
+
 describe('Mantaray 1.0 Unit Tests', () => {
   it('should init a single mantaray node with a random address', () => {
-    const node = initManifestNode()
+    const node = initManifestNode({ version: '1.0' })
     const randAddress = gen32Bytes()
     node.setEntry = randAddress
-    const serialized = node.serialize()
-    const nodeAgain = new MantarayNode()
-    nodeAgain.deserialize(serialized)
+    const nodeAgain = serialiseDeserialise(node)
     expect(randAddress).toStrictEqual(nodeAgain.getEntry)
   })
   
@@ -21,6 +28,98 @@ describe('Mantaray 1.0 Unit Tests', () => {
     const path = new TextEncoder().encode('vmi')
     node.addFork(path, randAddress)
     expect(() => node.serialize()).toThrowError()
+  })
+
+  it('tests expected node attributes one-by-one', () => {
+    const sampleNode = getSampleMantarayNode1_0()
+    const node = sampleNode.node
+    const { fork1, fork2, fork3, fork4, fork5 } = sampleNode.forks
+    expect(() => node.getForkAtPath(new TextEncoder().encode('path/not/exists'))).toThrowError()
+  
+    /// FORK1
+    const fork1Object = node.getForkAtPath(fork1.path)
+    //entry
+    expect(fork1Object.node.getEntry).toBe(fork1.entry)
+    expect(fork1Object.node.getEncEntry).toBe(true)
+    expect(fork1Object.node.getHasEntry).toBe(Boolean(fork1.entry))
+    expect(fork1Object.node.isValueType()).toBe(Boolean(fork1.entry))
+    //forkmetadata and nodemetadata
+    expect(fork1Object.node.forkMetadata).toStrictEqual(fork1.forkMetadata)
+    expect(fork1Object.node.metadata).toStrictEqual(fork1.forkMetadata)
+    expect(fork1Object.node.nodeMetadata).toStrictEqual(fork1.nodeMetadata)
+    expect(fork1Object.node.isWithMetadataType()).toBe(true)
+    //other attributes
+    expect(fork1Object.node.getIsEdge).toBe(false)
+    expect(fork1Object.node.isContinuousNode).toBe(false)
+    expect(fork1Object.node.isDirty()).toBe(true)
+
+    //FORK2
+    const fork2Object = node.getForkAtPath(fork2.path)
+    //entry
+    expect(fork2Object.node.getEntry).toBe(fork2.entry)
+    expect(fork2Object.node.getEncEntry).toBe(false)
+    expect(fork2Object.node.getHasEntry).toBe(Boolean(fork2.entry))
+    expect(fork2Object.node.isValueType()).toBe(Boolean(fork2.entry))
+    //forkmetadata and nodemetadata
+    expect(fork2Object.node.forkMetadata).toStrictEqual(fork2.forkMetadata)
+    expect(fork2Object.node.metadata).toStrictEqual(fork2.forkMetadata)
+    expect(fork2Object.node.nodeMetadata).toStrictEqual(fork2.nodeMetadata)
+    expect(fork2Object.node.isWithMetadataType()).toBe(false)
+    //other attributes
+    expect(fork2Object.node.getIsEdge).toBe(true)
+    expect(fork2Object.node.isContinuousNode).toBe(false)
+    expect(fork2Object.node.isDirty()).toBe(true)
+
+    //FORK3
+    const fork3Object = node.getForkAtPath(fork3.path)
+    //entry
+    expect(fork3Object.node.getEntry).toBe(fork3.entry)
+    expect(fork3Object.node.getEncEntry).toBe(false)
+    expect(fork3Object.node.getHasEntry).toBe(Boolean(fork3.entry))
+    expect(fork3Object.node.isValueType()).toBe(Boolean(fork3.entry))
+    //forkmetadata and nodemetadata
+    expect(fork3Object.node.forkMetadata).toStrictEqual(fork3.forkMetadata)
+    expect(fork3Object.node.metadata).toStrictEqual(fork3.nodeMetadata)
+    expect(fork3Object.node.nodeMetadata).toStrictEqual(fork3.nodeMetadata)
+    expect(fork3Object.node.isWithMetadataType()).toBe(true)
+    //other attributes
+    expect(fork3Object.node.getIsEdge).toBe(false)
+    expect(fork3Object.node.isContinuousNode).toBe(false)
+    expect(fork3Object.node.isDirty()).toBe(true)
+
+    //FORK4
+    const fork4Object = node.getForkAtPath(fork4.path)
+    //entry
+    expect(fork4Object.node.getEntry).toBe(fork4.entry)
+    expect(fork4Object.node.getEncEntry).toBe(false)
+    expect(fork4Object.node.getHasEntry).toBe(Boolean(fork4.entry))
+    expect(fork4Object.node.isValueType()).toBe(Boolean(fork4.entry))
+    //forkmetadata and nodemetadata
+    expect(fork4Object.node.forkMetadata).toStrictEqual(fork4.forkMetadata)
+    expect(fork4Object.node.metadata).toStrictEqual({...fork4.nodeMetadata, ...fork4.forkMetadata}) // has to overwrite nodeMetadata
+    expect(fork4Object.node.nodeMetadata).toStrictEqual(fork4.nodeMetadata)
+    expect(fork4Object.node.isWithMetadataType()).toBe(true)
+    //other attributes
+    expect(fork4Object.node.getIsEdge).toBe(true)
+    expect(fork4Object.node.isContinuousNode).toBe(false)
+    expect(fork4Object.node.isDirty()).toBe(true)
+
+    //FORK5
+    const fork5Object = node.getForkAtPath(fork5.path)
+    //entry
+    expect(fork5Object.node.getEntry).toBe(fork5.entry)
+    expect(fork5Object.node.getEncEntry).toBe(false)
+    expect(fork5Object.node.getHasEntry).toBe(Boolean(fork5.entry))
+    expect(fork5Object.node.isValueType()).toBe(Boolean(fork5.entry))
+    //forkmetadata and nodemetadata
+    expect(fork5Object.node.forkMetadata).toStrictEqual(fork5.forkMetadata)
+    expect(fork5Object.node.metadata).toStrictEqual(fork5.forkMetadata)
+    expect(fork5Object.node.nodeMetadata).toStrictEqual(fork5.nodeMetadata)
+    expect(fork5Object.node.isWithMetadataType()).toBe(false)
+    //other attributes
+    expect(fork5Object.node.getIsEdge).toBe(false)
+    expect(fork5Object.node.isContinuousNode).toBe(false)
+    expect(fork5Object.node.isDirty()).toBe(true)
   })
   
   it('checks the expected structure of the sample mantaray node', () => {
@@ -54,10 +153,6 @@ describe('Mantaray 1.0 Unit Tests', () => {
     expect(Object.keys(fifthLevelNode2.forks)).toStrictEqual([String(path3[20])]) // fifth level 2: '.'
     const sixthLevelNode1 = fifthLevelNode2.forks[path3[20]]
     expect(sixthLevelNode1.prefix).toStrictEqual(new TextEncoder().encode('.ext'))
-  })
-
-  it('checks nodeMetadata', () => {
-    //TODO
   })
   
   it('should remove forks', () => {
