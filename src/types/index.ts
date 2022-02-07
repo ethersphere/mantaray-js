@@ -16,7 +16,7 @@ export enum NodeType {
   mask = 255,
 }
 
-export type MetadataMapping = { [key: string]: string }
+export type MetadataMapping = { [key: string]: any }
 
 export type StorageLoader = (reference: Reference) => Promise<Uint8Array>
 
