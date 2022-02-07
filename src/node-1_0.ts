@@ -58,6 +58,12 @@ class UndefinedField extends Error {
   }
 }
 
+class NodesNotSame extends Error {
+  constructor(error: string, path: string) {
+    super(`"Error: ${error} \n\ton path: ${path}`)
+  }
+}
+
 // LOGIC
 
 export class MantarayFork {
@@ -675,37 +681,53 @@ export async function loadAllNodes(storageLoader: StorageLoader, node: MantarayN
 export const equalNodes = (a: MantarayNode, b: MantarayNode, accumulatedPrefix = ''): void | never => {
   // node flags comparisation
   if (a.isContinuousNode !== b.isContinuousNode) {
-    throw new Error(`Nodes do not have same isContinuousNode flags: a ${a.isContinuousNode} ; b: ${b.isContinuousNode}`)
+    throw new NodesNotSame(
+      `Nodes do not have same isContinuousNode flags: a ${a.isContinuousNode} ; b: ${b.isContinuousNode}`,
+      accumulatedPrefix,
+    )
   }
 
   if (a.getHasEntry !== b.getHasEntry) {
-    throw new Error(`Nodes do not have same hasEntry flags: a ${a.getHasEntry} ; b: ${b.getHasEntry}`)
+    throw new NodesNotSame(
+      `Nodes do not have same hasEntry flags: a ${a.getHasEntry} ; b: ${b.getHasEntry}`,
+      accumulatedPrefix,
+    )
   }
 
   if (Boolean(a.getEncEntry) !== Boolean(b.getEncEntry)) {
-    throw new Error(`Nodes do not have same encEntry flags: a ${a.getEncEntry} ; b: ${b.getEncEntry}`)
+    throw new NodesNotSame(
+      `Nodes do not have same encEntry flags: a ${a.getEncEntry} ; b: ${b.getEncEntry}\n\tAccumulated prefix: ${accumulatedPrefix}`,
+      accumulatedPrefix,
+    )
   }
 
   if (a.getIsEdge !== b.getIsEdge) {
-    throw new Error(`Nodes do not have same isEdge flags: a ${a.getIsEdge} ; b: ${b.getIsEdge}`)
+    throw new NodesNotSame(
+      `Nodes do not have same isEdge flags: a ${a.getIsEdge} ; b: ${b.getIsEdge}`,
+      accumulatedPrefix,
+    )
   }
 
   if (a.forkMetadataSegmentSize !== b.forkMetadataSegmentSize) {
-    throw new Error(
+    throw new NodesNotSame(
       `Nodes do not have same forkMetadataSegmentSize: a ${a.forkMetadataSegmentSize} ; b: ${b.forkMetadataSegmentSize}`,
+      accumulatedPrefix,
     )
   }
 
   // node metadata comparisation
   if (!a.nodeMetadata !== !b.nodeMetadata) {
-    throw Error(`One of the nodes do not have metadata defined. \n a: ${a.nodeMetadata} \n b: ${b.nodeMetadata}`)
+    throw new NodesNotSame(
+      `One of the nodes do not have metadata defined. \n a: ${a.nodeMetadata} \n b: ${b.nodeMetadata}`,
+      accumulatedPrefix,
+    )
   } else if (a.nodeMetadata && b.nodeMetadata) {
     //TODO deep equation
   }
 
   // node entry comparisation
   if (!equalBytes(a.getEntry || new Uint8Array(0), b.getEntry || new Uint8Array(0))) {
-    throw Error(`Nodes do not have same entries. \n a: ${a.getEntry} \n b: ${a.getEntry}`)
+    throw new NodesNotSame(`Nodes do not have same entries. \n a: ${a.getEntry} \n b: ${a.getEntry}`, accumulatedPrefix)
   }
 
   if (!a.forks) return
@@ -714,7 +736,10 @@ export const equalNodes = (a: MantarayNode, b: MantarayNode, accumulatedPrefix =
   const aKeys = Object.keys(a.forks)
 
   if (!b.forks || aKeys.length !== Object.keys(b.forks).length) {
-    throw Error(`Nodes do not have same fork length on equality check at prefix ${accumulatedPrefix}`)
+    throw new NodesNotSame(
+      `Nodes do not have same fork length on equality check at prefix ${accumulatedPrefix}`,
+      accumulatedPrefix,
+    )
   }
 
   for (const key of aKeys) {
@@ -724,7 +749,7 @@ export const equalNodes = (a: MantarayNode, b: MantarayNode, accumulatedPrefix =
     const prefixString = new TextDecoder().decode(prefix)
 
     if (!equalBytes(prefix, bFork.prefix)) {
-      throw Error(`Nodes do not have same prefix under the same key "${key}" at prefix ${accumulatedPrefix}`)
+      throw new NodesNotSame(`Nodes do not have same prefix under the same key "${key}"`, accumulatedPrefix)
     }
 
     //TODO fork metadata deep equation
