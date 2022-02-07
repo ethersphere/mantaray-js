@@ -21,7 +21,7 @@ describe('Mantaray 1.0 Unit Tests', () => {
     const nodeAgain = serialiseDeserialise(node)
     expect(randAddress).toStrictEqual(nodeAgain.getEntry)
   })
-  
+
   it('should throw exception on serialize if there were no storage saves before', () => {
     const node = initManifestNode()
     const randAddress = gen32Bytes()
@@ -35,7 +35,7 @@ describe('Mantaray 1.0 Unit Tests', () => {
     const node = sampleNode.node
     const { fork1, fork2, fork3, fork4, fork5 } = sampleNode.forks
     expect(() => node.getForkAtPath(new TextEncoder().encode('path/not/exists'))).toThrowError()
-  
+
     /// FORK1
     const fork1Object = node.getForkAtPath(fork1.path)
     //entry
@@ -96,7 +96,7 @@ describe('Mantaray 1.0 Unit Tests', () => {
     expect(fork4Object.node.isValueType()).toBe(Boolean(fork4.entry))
     //forkmetadata and nodemetadata
     expect(fork4Object.node.forkMetadata).toStrictEqual(fork4.forkMetadata)
-    expect(fork4Object.node.metadata).toStrictEqual({...fork4.nodeMetadata, ...fork4.forkMetadata}) // has to overwrite nodeMetadata
+    expect(fork4Object.node.metadata).toStrictEqual({ ...fork4.nodeMetadata, ...fork4.forkMetadata }) // has to overwrite nodeMetadata
     expect(fork4Object.node.nodeMetadata).toStrictEqual(fork4.nodeMetadata)
     expect(fork4Object.node.isWithMetadataType()).toBe(true)
     //other attributes
@@ -121,7 +121,7 @@ describe('Mantaray 1.0 Unit Tests', () => {
     expect(fork5Object.node.isContinuousNode).toBe(false)
     expect(fork5Object.node.isDirty()).toBe(true)
   })
-  
+
   it('checks the expected structure of the sample mantaray node', () => {
     const sampleNode = getSampleMantarayNode1_0()
     const node = sampleNode.node
@@ -130,10 +130,9 @@ describe('Mantaray 1.0 Unit Tests', () => {
     const path2 = fork2.path
     const path3 = fork3.path
     const path5 = fork5.path
-  
+
     expect(Object.keys(node.forks)).toStrictEqual([String(path1[0])]) // first level: 'p'
     const secondLevelFork = node.forks![path5[0]]
-    console.log('secondlevel prefix', new TextDecoder().decode(secondLevelFork.prefix))
     expect(secondLevelFork.prefix).toStrictEqual(new TextEncoder().encode('path'))
     const secondLevelNode = secondLevelFork.node
     expect(Object.keys(secondLevelNode.forks)).toStrictEqual([String(path1[4]), String(path5[4])]) // second level: '1', '2'
@@ -154,7 +153,7 @@ describe('Mantaray 1.0 Unit Tests', () => {
     const sixthLevelNode1 = fifthLevelNode2.forks[path3[20]]
     expect(sixthLevelNode1.prefix).toStrictEqual(new TextEncoder().encode('.ext'))
   })
-  
+
   it('should remove forks', () => {
     const sampleNode = getSampleMantarayNode1_0()
     const node = sampleNode.node
@@ -162,7 +161,7 @@ describe('Mantaray 1.0 Unit Tests', () => {
     // save sample node
     const path1 = fork1.path
     const path2 = fork2.path
-  
+
     // non existing path check
     expect(() => node.removePath(new Uint8Array([0, 1, 2]))).toThrowError()
     // node where the fork set will change
