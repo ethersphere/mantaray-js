@@ -1,5 +1,5 @@
 import { Utils } from '@ethersphere/bee-js'
-import { MarshalVersion, MantarayNode, Mantaray0_2, Mantaray1_0, Reference, MetadataMapping } from '../src'
+import { MantarayNode, Mantaray0_2, Mantaray1_0, Reference, MetadataMapping } from '../src'
 import { gen32Bytes } from '../src/utils'
 
 const { hexToBytes } = Utils.Hex
@@ -53,7 +53,7 @@ export function commonMatchers(): void {
 }
 
 export function getSampleMantarayNode0_2(): { node: MantarayNode<'0.2'>; paths: Uint8Array[] } {
-  let node: MantarayNode<'0.2'> = new Mantaray0_2.MantarayNode()
+  const node: MantarayNode<'0.2'> = new Mantaray0_2.MantarayNode()
   const randAddress = gen32Bytes()
   node.setEntry = randAddress
   const path1 = new TextEncoder().encode('path1/valami/elso')
@@ -73,24 +73,24 @@ export function getSampleMantarayNode0_2(): { node: MantarayNode<'0.2'>; paths: 
   }
 }
 
-type SampleFork1_0 = { 
-  path: Uint8Array, 
-  entry?: Reference, 
-  nodeMetadata?: MetadataMapping,
+type SampleFork1_0 = {
+  path: Uint8Array
+  entry?: Reference
+  nodeMetadata?: MetadataMapping
   forkMetadata?: MetadataMapping
 }
 
 type SampleForks1_0 = {
   /** encrypted entry with forkMetadata */
-  fork1: SampleFork1_0,
+  fork1: SampleFork1_0
   /** edge node with reference */
-  fork2: SampleFork1_0,
+  fork2: SampleFork1_0
   /** leaf node with nodeMetadata without reference */
-  fork3: SampleFork1_0,
+  fork3: SampleFork1_0
   /** edge node without reference with node and forkMetadata  */
-  fork4: SampleFork1_0,
+  fork4: SampleFork1_0
   /** standalone/empty leaf node */
-  fork5: SampleFork1_0,
+  fork5: SampleFork1_0
 }
 
 export function getSampleMantarayNode1_0(): { node: MantarayNode<'1.0'>; forks: SampleForks1_0 } {
@@ -98,7 +98,9 @@ export function getSampleMantarayNode1_0(): { node: MantarayNode<'1.0'>; forks: 
   const forks: SampleForks1_0 = {
     fork1: {
       path: new TextEncoder().encode('path1/valami/elso'),
-      entry: hexToBytes<32>('7d4ccc856f51d0477fde68f9f06bca97c6cd3b4a86b3369ea6489ceaf7b315577d4ccc856f51d0477fde68f9f06bca97c6cd3b4a86b3369ea6489ceaf7b31557'),
+      entry: hexToBytes<32>(
+        '7d4ccc856f51d0477fde68f9f06bca97c6cd3b4a86b3369ea6489ceaf7b315577d4ccc856f51d0477fde68f9f06bca97c6cd3b4a86b3369ea6489ceaf7b31557',
+      ),
       forkMetadata: { vmi: 'elso' },
     },
     fork2: {
@@ -111,23 +113,20 @@ export function getSampleMantarayNode1_0(): { node: MantarayNode<'1.0'>; forks: 
     },
     fork4: {
       path: new TextEncoder().encode('path1/valami'),
-      forkMetadata: { vmi: 'negy'},
-      nodeMetadata: { vmi: 'negy!', vmi2: 123 }
+      forkMetadata: { vmi: 'negy' },
+      nodeMetadata: { vmi: 'negy!', vmi2: 123 },
     },
     fork5: {
       path: new TextEncoder().encode('path2'),
     },
   }
-  for(const fork of Object.values(forks)) {
-    node.addFork(
-      fork.path, 
-      { 
-        entry: fork.entry, 
-        nodeMetadata: fork.nodeMetadata,
-        forkMetadata: fork.forkMetadata,
-        autoForkMetadataSize: true,
-      }
-    )
+  for (const fork of Object.values(forks)) {
+    node.addFork(fork.path, {
+      entry: fork.entry,
+      nodeMetadata: fork.nodeMetadata,
+      forkMetadata: fork.forkMetadata,
+      autoForkMetadataSize: true,
+    })
   }
 
   return {
