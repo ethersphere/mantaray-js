@@ -572,8 +572,10 @@ export class MantarayNode {
     }
 
     /// NodeMetadata
-    if (data.length > offset) {
-      const jsonString = new TextDecoder().decode(data.slice(offset))
+    const metadataBytes = data.slice(offset)
+
+    if (metadataBytes.length > offset) {
+      const jsonString = new TextDecoder().decode(metadataBytes)
       try {
         this._nodeMetadata = JSON.parse(jsonString)
       } catch (e) {
