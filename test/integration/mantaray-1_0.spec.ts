@@ -31,9 +31,6 @@ describe('Mantaray 1.0 integration tests', () => {
     await rootNodeAgain.load(loadFunction, address)
     await loadAllNodes(loadFunction, rootNodeAgain)
 
-    // expect(Object.keys(nodeAgain.forks)).toStrictEqual([String(samples.forks.fork1.path[0])]) // first level: 'p'
-    // expect(nodeAgain.getIsEdge).toBe(true)
-    // expect(nodeAgain.getHasEntry).toBe(false)
     expect(rootNodeAgain).toBeEqualNode1_0(rootNode)
   })
 })
