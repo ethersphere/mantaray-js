@@ -25,6 +25,7 @@
   ],
   "license": "BSD-3-Clause",
   "dependencies": {
+    "deep-equal": "^2.0.5",
     "get-random-values": "^1.2.2",
     "js-sha3": "^0.8.0"
   },
@@ -36,6 +37,7 @@
     "@babel/preset-typescript": "^7.14.5",
     "@ethersphere/bee-js": "^1.0.0",
     "@jest/types": "^27.0.6",
+    "@types/deep-equal": "^1.0.1",
     "@types/jest": "^26.0.24",
     "@types/terser-webpack-plugin": "^5.0.4",
     "@types/webpack-bundle-analyzer": "^4.4.1",

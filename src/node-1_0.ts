@@ -2,6 +2,7 @@ import { Bytes, MarshalVersion, MetadataMapping, Reference, StorageLoader, Stora
 import {
   checkReference,
   common,
+  deserializeMetadata,
   encryptDecrypt,
   equalBytes,
   findIndexOfArray,
@@ -12,6 +13,7 @@ import {
   serializeMetadata,
   serializeVersion,
 } from './utils'
+import deepEqual from 'deep-equal'
 
 type ForkMapping = { [key: number]: MantarayFork }
 type RecursiveSaveReturnType = { reference: Reference; changed: boolean }
@@ -115,15 +117,17 @@ export class MantarayFork {
     const fork = new MantarayFork(prefix, node)
     const entryLength = encEntry ? 64 : 32
     // on deserialisation the content address stores the fork's mantaray node address
-    node.setContentAddress = data.slice(nodeForkSizes.preReference, nodeForkSizes.preReference + entryLength) as
+    const contentAddress = data.slice(nodeForkSizes.preReference, nodeForkSizes.preReference + entryLength) as
       | Bytes<32>
       | Bytes<64>
     const metadataBytes = data.slice(nodeForkSizes.preReference + entryLength)
 
     if (metadataBytes.length > 0) {
-      const jsonString = new TextDecoder().decode(metadataBytes)
-      node.forkMetadata = JSON.parse(jsonString)
+      node.forkMetadata = deserializeMetadata(metadataBytes)
     }
+
+    // contentAddress set always at the end of the deserialisation because the dirty flag is based on this as well
+    node.setContentAddress = contentAddress
 
     return fork
   }
@@ -682,6 +686,7 @@ export async function loadAllNodes(storageLoader: StorageLoader, node: MantarayN
  * @param accumulatedPrefix accumulates the prefix during the recursion
  * @throws Error if the two nodes properties are not equal recursively
  */
+// eslint-disable-next-line complexity
 export const equalNodes = (a: MantarayNode, b: MantarayNode, accumulatedPrefix = ''): void | never => {
   // node flags comparisation
   if (a.isContinuousNode !== b.isContinuousNode) {
@@ -722,11 +727,35 @@ export const equalNodes = (a: MantarayNode, b: MantarayNode, accumulatedPrefix =
   // node metadata comparisation
   if (!a.nodeMetadata !== !b.nodeMetadata) {
     throw new NodesNotSame(
-      `One of the nodes does not have metadata defined. a: ${a.nodeMetadata} b: ${b.nodeMetadata}`,
+      `One of the nodes does not have nodeMetadata defined. a: ${a.nodeMetadata} b: ${b.nodeMetadata}`,
       accumulatedPrefix,
     )
-  } else if (a.nodeMetadata && b.nodeMetadata) {
-    //TODO deep equation
+  }
+
+  if (a.nodeMetadata && b.nodeMetadata && !deepEqual(a.nodeMetadata, b.nodeMetadata)) {
+    throw new NodesNotSame(
+      `Nodes do not have same nodeMetadata. a: ${JSON.stringify(a.nodeMetadata)} ; b: ${JSON.stringify(
+        b.nodeMetadata,
+      )}`,
+      accumulatedPrefix,
+    )
+  }
+
+  // node metadata comparisation
+  if (!a.forkMetadata !== !b.forkMetadata) {
+    throw new NodesNotSame(
+      `One of the nodes does not have forkMetadata defined. a: ${a.forkMetadata} b: ${b.forkMetadata}`,
+      accumulatedPrefix,
+    )
+  }
+
+  if (a.forkMetadata && b.forkMetadata && !deepEqual(a.forkMetadata, b.forkMetadata)) {
+    throw new NodesNotSame(
+      `Nodes do not have same forkMetadata. a: ${JSON.stringify(a.forkMetadata)} ; b: ${JSON.stringify(
+        b.forkMetadata,
+      )}`,
+      accumulatedPrefix,
+    )
   }
 
   // node entry comparisation
@@ -755,8 +784,6 @@ export const equalNodes = (a: MantarayNode, b: MantarayNode, accumulatedPrefix =
     if (!equalBytes(prefix, bFork.prefix)) {
       throw new NodesNotSame(`Nodes do not have same prefix under the same key "${key}"`, accumulatedPrefix)
     }
-
-    //TODO fork metadata deep equation
 
     equalNodes(aFork.node, bFork.node, accumulatedPrefix + prefixString)
   }
