@@ -210,5 +210,13 @@ export function serializeVersion(version: MarshalVersion): Bytes<31> {
 export function serializeMetadata(metadata: MetadataMapping): Uint8Array {
   const jsonString = JSON.stringify(metadata)
 
-  return new TextEncoder().encode(jsonString)
+  const jsonData = new TextEncoder().encode(jsonString)
+  const remainingBytesForSegment = 32 - (jsonData.length % 32)
+  const paddingBytes = new Uint8Array(remainingBytesForSegment)
+  paddingBytes.fill(32) // space
+
+  return new Uint8Array({
+    ...jsonData,
+    ...paddingBytes,
+  })
 }
