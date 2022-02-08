@@ -215,8 +215,16 @@ export function serializeMetadata(metadata: MetadataMapping): Uint8Array {
   const paddingBytes = new Uint8Array(remainingBytesForSegment)
   paddingBytes.fill(32) // space
 
-  return new Uint8Array({
-    ...jsonData,
-    ...paddingBytes,
-  })
+  return new Uint8Array([...jsonData, ...paddingBytes])
+}
+
+/** If the JSON deserialisation of the data is not succesful, it will give back undefined  */
+export function deserializeMetadata(data: Uint8Array): MetadataMapping | undefined {
+  try {
+    const jsonString = new TextDecoder().decode(data)
+
+    return JSON.parse(jsonString)
+  } catch (e) {
+    return undefined
+  }
 }
