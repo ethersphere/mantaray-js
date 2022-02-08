@@ -8,6 +8,7 @@ import {
   flattenBytesArray,
   gen32Bytes,
   IndexBytes,
+  null32Bytes,
   serializeMetadata,
   serializeVersion,
 } from './utils'
@@ -85,11 +86,11 @@ export class MantarayFork {
     const prefixBytes = new Uint8Array(nodeForkSizes.prefixMax)
     prefixBytes.set(this.prefix)
 
-    const entry: Reference | undefined = this.node.getContentAddress
+    const mantarayReference: Reference | undefined = this.node.getContentAddress
 
-    if (!entry) throw Error('cannot serialize MantarayFork because it does not have contentAddress')
+    if (!mantarayReference) throw Error('cannot serialize MantarayFork because it does not have contentAddress')
 
-    const data = new Uint8Array([...prefixLengthBytes, ...prefixBytes, ...entry])
+    const data = new Uint8Array([...prefixLengthBytes, ...prefixBytes, ...mantarayReference])
 
     if (segmentSize > 0) {
       const jsonString = JSON.stringify(metadata)
@@ -310,7 +311,7 @@ export class MantarayNode {
     if (!fork) {
       const newNode = new MantarayNode()
 
-      if (this.obfuscationKey) {
+      if (!equalBytes(this.obfuscationKey, null32Bytes)) {
         newNode.setObfuscationKey = gen32Bytes()
       }
 
@@ -352,7 +353,9 @@ export class MantarayNode {
     if (restPath.length > 0) {
       // create new node for the common path
       newNode = new MantarayNode()
-      newNode.setObfuscationKey = this.obfuscationKey ? gen32Bytes() : (new Uint8Array(32) as Bytes<32>)
+      newNode.setObfuscationKey = equalBytes(this.obfuscationKey, null32Bytes)
+        ? (new Uint8Array(32) as Bytes<32>)
+        : gen32Bytes()
       newNode.forks = {}
       //TODO handle continuous node (shorten path)
       newNode.forks[restPath[0]] = new MantarayFork(restPath, fork.node) // copy old parent node to its remaining path
@@ -682,35 +685,35 @@ export const equalNodes = (a: MantarayNode, b: MantarayNode, accumulatedPrefix =
   // node flags comparisation
   if (a.isContinuousNode !== b.isContinuousNode) {
     throw new NodesNotSame(
-      `Nodes do not have same isContinuousNode flags: a ${a.isContinuousNode} ; b: ${b.isContinuousNode}`,
+      `Nodes do not have same isContinuousNode flags. a: ${a.isContinuousNode} ; b: ${b.isContinuousNode}`,
       accumulatedPrefix,
     )
   }
 
   if (a.getHasEntry !== b.getHasEntry) {
     throw new NodesNotSame(
-      `Nodes do not have same hasEntry flags: a ${a.getHasEntry} ; b: ${b.getHasEntry}`,
+      `Nodes do not have same hasEntry flags. a: ${a.getHasEntry} ; b: ${b.getHasEntry}`,
       accumulatedPrefix,
     )
   }
 
   if (Boolean(a.getEncEntry) !== Boolean(b.getEncEntry)) {
     throw new NodesNotSame(
-      `Nodes do not have same encEntry flags: a ${a.getEncEntry} ; b: ${b.getEncEntry}\n\tAccumulated prefix: ${accumulatedPrefix}`,
+      `Nodes do not have same encEntry flags. a: ${a.getEncEntry} ; b: ${b.getEncEntry}\n\tAccumulated prefix: ${accumulatedPrefix}`,
       accumulatedPrefix,
     )
   }
 
   if (a.getIsEdge !== b.getIsEdge) {
     throw new NodesNotSame(
-      `Nodes do not have same isEdge flags: a ${a.getIsEdge} ; b: ${b.getIsEdge}`,
+      `Nodes do not have same isEdge flags. a: ${a.getIsEdge} ; b: ${b.getIsEdge}`,
       accumulatedPrefix,
     )
   }
 
   if (a.forkMetadataSegmentSize !== b.forkMetadataSegmentSize) {
     throw new NodesNotSame(
-      `Nodes do not have same forkMetadataSegmentSize: a ${a.forkMetadataSegmentSize} ; b: ${b.forkMetadataSegmentSize}`,
+      `Nodes do not have same forkMetadataSegmentSize. a: ${a.forkMetadataSegmentSize} ; b: ${b.forkMetadataSegmentSize}`,
       accumulatedPrefix,
     )
   }
@@ -718,7 +721,7 @@ export const equalNodes = (a: MantarayNode, b: MantarayNode, accumulatedPrefix =
   // node metadata comparisation
   if (!a.nodeMetadata !== !b.nodeMetadata) {
     throw new NodesNotSame(
-      `One of the nodes do not have metadata defined. \n a: ${a.nodeMetadata} \n b: ${b.nodeMetadata}`,
+      `One of the nodes do not have metadata defined. a: ${a.nodeMetadata} b: ${b.nodeMetadata}`,
       accumulatedPrefix,
     )
   } else if (a.nodeMetadata && b.nodeMetadata) {
@@ -727,7 +730,7 @@ export const equalNodes = (a: MantarayNode, b: MantarayNode, accumulatedPrefix =
 
   // node entry comparisation
   if (!equalBytes(a.getEntry || new Uint8Array(0), b.getEntry || new Uint8Array(0))) {
-    throw new NodesNotSame(`Nodes do not have same entries. \n a: ${a.getEntry} \n b: ${a.getEntry}`, accumulatedPrefix)
+    throw new NodesNotSame(`Nodes do not have same entries. a: ${a.getEntry} ; b: ${a.getEntry}`, accumulatedPrefix)
   }
 
   if (!a.forks) return

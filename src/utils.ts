@@ -3,6 +3,9 @@ import type { Message } from 'js-sha3'
 import { keccak256 } from 'js-sha3'
 import { Bytes, MarshalVersion, MetadataMapping, Reference } from './types'
 
+/** only for comparisation. For assigment always create new uint8array! */
+export const null32Bytes = new Uint8Array(32)
+
 export function checkReference(ref: Reference): void | never {
   if (!(ref instanceof Uint8Array)) {
     throw new Error('Given referennce is not an Uint8Array instance.')
