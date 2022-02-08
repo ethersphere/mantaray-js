@@ -114,7 +114,7 @@ export class MantarayFork {
     const node = new MantarayNode()
     const fork = new MantarayFork(prefix, node)
     const entryLength = encEntry ? 64 : 32
-    node.setContentAddress = data.slice(nodeForkSizes.preReference, nodeForkSizes.preReference + entryLength) as
+    node.setEntry = data.slice(nodeForkSizes.preReference, nodeForkSizes.preReference + entryLength) as
       | Bytes<32>
       | Bytes<64>
     const metadataBytes = data.slice(nodeForkSizes.preReference + entryLength)
@@ -565,7 +565,7 @@ export class MantarayNode {
 
       /// Forks
       this.forks = {}
-      const forkSize = nodeForkSizes.preReference + refBytesSize + this._forkMetadataSegmentSize * 32
+      const forkSize = nodeForkSizes.preReference + (this.encEntry ? 64 : 32) + this._forkMetadataSegmentSize * 32
       indexForks.forEach(byte => {
         if (data.length < offset + forkSize) {
           throw Error(`There is not enough size to read fork data at offset ${offset}`)
