@@ -114,7 +114,8 @@ export class MantarayFork {
     const node = new MantarayNode()
     const fork = new MantarayFork(prefix, node)
     const entryLength = encEntry ? 64 : 32
-    node.setEntry = data.slice(nodeForkSizes.preReference, nodeForkSizes.preReference + entryLength) as
+    // on deserialisation the content address stores the fork's mantaray node address
+    node.setContentAddress = data.slice(nodeForkSizes.preReference, nodeForkSizes.preReference + entryLength) as
       | Bytes<32>
       | Bytes<64>
     const metadataBytes = data.slice(nodeForkSizes.preReference + entryLength)
@@ -576,14 +577,14 @@ export class MantarayNode {
 
         this.forks![byte] = fork
 
-        offset += refBytesSize
+        offset += forkSize
       })
     }
 
     /// NodeMetadata
     const metadataBytes = data.slice(offset)
 
-    if (metadataBytes.length > offset) {
+    if (metadataBytes.length > 0) {
       const jsonString = new TextDecoder().decode(metadataBytes)
       try {
         this._nodeMetadata = JSON.parse(jsonString)
@@ -668,7 +669,7 @@ export async function loadAllNodes(storageLoader: StorageLoader, node: MantarayN
   if (!node.forks) return
 
   for (const fork of Object.values(node.forks)) {
-    if (fork.node.getEntry) await fork.node.load(storageLoader, fork.node.getEntry)
+    if (fork.node.getContentAddress) await fork.node.load(storageLoader, fork.node.getContentAddress)
     await loadAllNodes(storageLoader, fork.node)
   }
 }
@@ -721,7 +722,7 @@ export const equalNodes = (a: MantarayNode, b: MantarayNode, accumulatedPrefix =
   // node metadata comparisation
   if (!a.nodeMetadata !== !b.nodeMetadata) {
     throw new NodesNotSame(
-      `One of the nodes do not have metadata defined. a: ${a.nodeMetadata} b: ${b.nodeMetadata}`,
+      `One of the nodes does not have metadata defined. a: ${a.nodeMetadata} b: ${b.nodeMetadata}`,
       accumulatedPrefix,
     )
   } else if (a.nodeMetadata && b.nodeMetadata) {
@@ -730,7 +731,7 @@ export const equalNodes = (a: MantarayNode, b: MantarayNode, accumulatedPrefix =
 
   // node entry comparisation
   if (!equalBytes(a.getEntry || new Uint8Array(0), b.getEntry || new Uint8Array(0))) {
-    throw new NodesNotSame(`Nodes do not have same entries. a: ${a.getEntry} ; b: ${a.getEntry}`, accumulatedPrefix)
+    throw new NodesNotSame(`Nodes do not have same entries. a: ${a.getEntry} ; b: ${b.getEntry}`, accumulatedPrefix)
   }
 
   if (!a.forks) return
