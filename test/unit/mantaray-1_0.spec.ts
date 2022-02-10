@@ -1,11 +1,11 @@
-import { initManifestNode, Mantaray1_0 } from '../../src'
+import { initManifestNode, MantarayV1 } from '../../src'
 import { gen32Bytes } from '../../src/utils'
 import { getSampleMantarayNode1_0 } from '../utils'
 
-const { MantarayNode } = Mantaray1_0
+const { MantarayNode } = MantarayV1
 
 /** Used for checking correct serialisation of the node */
-function serialiseDeserialise(node: Mantaray1_0.MantarayNode): Mantaray1_0.MantarayNode {
+function serialiseDeserialise(node: MantarayV1.MantarayNode): MantarayV1.MantarayNode {
   const serialized = node.serialize()
   const nodeAgain = new MantarayNode()
   nodeAgain.deserialize(serialized)

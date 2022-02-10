@@ -1,5 +1,5 @@
-import { MantarayNode as MantarayNode0_2 } from './node'
-import { MantarayNode as MantarayNode1_0 } from './node-1_0'
+import { MantarayNode as MantarayNodeV0_2 } from './node-v0_2'
+import { MantarayNode as MantarayNodeV1 } from './node-v1'
 import { Bytes, MarshalVersion } from './types'
 import { gen32Bytes } from './utils'
 
@@ -12,14 +12,14 @@ export function initManifestNode<Version extends MarshalVersion>(options?: {
   const version: MarshalVersion = options?.version ? options!.version : '1.0'
 
   if (version === '0.2') {
-    const manifestNode0_2 = new MantarayNode0_2()
+    const manifestNode0_2 = new MantarayNodeV0_2()
     manifestNode0_2.setObfuscationKey = obfuscationKey
 
     return manifestNode0_2 as MantarayNode<Version>
   }
 
   if (version === '1.0') {
-    const manifestNode1_0 = new MantarayNode1_0()
+    const manifestNode1_0 = new MantarayNodeV1()
     manifestNode1_0.obfuscationKey = obfuscationKey
 
     return manifestNode1_0 as MantarayNode<Version>
@@ -29,14 +29,14 @@ export function initManifestNode<Version extends MarshalVersion>(options?: {
 }
 
 export type MantarayNode<Version extends MarshalVersion | undefined = undefined> = Version extends '0.2'
-  ? MantarayNode0_2
+  ? MantarayNodeV0_2
   : Version extends '1.0'
-  ? MantarayNode1_0
+  ? MantarayNodeV1
   : Version extends undefined
-  ? MantarayNode0_2 | MantarayNode1_0
+  ? MantarayNodeV0_2 | MantarayNodeV1
   : never
 
-export * as Mantaray0_2 from './node'
+export * as MantarayV0_2 from './node-v0_2'
 export * from './types'
 export * as Utils from './utils'
-export * as Mantaray1_0 from './node-1_0'
+export * as MantarayV1 from './node-v1'

@@ -1,6 +1,6 @@
 import { Bee, Utils } from '@ethersphere/bee-js'
-import { Mantaray1_0 } from '../../src'
-import { loadAllNodes } from '../../src/node-1_0'
+import { MantarayV1 } from '../../src'
+import { loadAllNodes } from '../../src/node-v1'
 import type { Reference } from '../../src/types'
 import { commonMatchers, getSampleMantarayNode1_0 } from '../utils'
 
@@ -27,7 +27,7 @@ describe('Mantaray 1.0 integration tests', () => {
     const samples = getSampleMantarayNode1_0()
     const rootNode = samples.node
     const address = await rootNode.save(saveFunction)
-    const rootNodeAgain = new Mantaray1_0.MantarayNode()
+    const rootNodeAgain = new MantarayV1.MantarayNode()
     await rootNodeAgain.load(loadFunction, address)
     await loadAllNodes(loadFunction, rootNodeAgain)
 

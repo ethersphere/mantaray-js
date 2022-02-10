@@ -1,9 +1,9 @@
-import { initManifestNode, Mantaray0_2 } from '../../src'
-import { checkForSeparator } from '../../src/node'
+import { initManifestNode, MantarayV0_2 } from '../../src'
+import { checkForSeparator } from '../../src/node-v0_2'
 import { gen32Bytes } from '../../src/utils'
 import { getSampleMantarayNode0_2 } from '../utils'
 
-const { MantarayNode } = Mantaray0_2
+const { MantarayNode } = MantarayV0_2
 
 describe('Mantaray 0.2 Unit Tests', () => {
   it('should init a single mantaray node with a random address', () => {
@@ -15,24 +15,24 @@ describe('Mantaray 0.2 Unit Tests', () => {
     nodeAgain.deserialize(serialized)
     expect(randAddress).toStrictEqual(nodeAgain.getEntry)
   })
-  
+
   it('tests getForkAtPath method of node and checkForSeparator function', () => {
     const sampleNode = getSampleMantarayNode0_2()
     const node = sampleNode.node
     expect(() => node.getForkAtPath(new TextEncoder().encode('path/not/exists'))).toThrowError()
-  
+
     const fork1 = node.getForkAtPath(new TextEncoder().encode('path1/valami/')) // no separator in the descendants
     expect(checkForSeparator(fork1.node)).toBeFalsy()
-  
+
     const path2 = sampleNode.paths[3] // separator in the descendants
     const fork2 = node.getForkAtPath(path2)
     expect(checkForSeparator(fork2.node)).toBeTruthy()
-  
+
     const path3 = sampleNode.paths[4] // no separator in the descendants, no forks
     const fork3 = node.getForkAtPath(path3)
     expect(checkForSeparator(fork3.node)).toBeFalsy()
   })
-  
+
   it('should throw exception on serialize if there were no storage saves before', () => {
     const node = initManifestNode()
     const randAddress = gen32Bytes()
@@ -40,7 +40,7 @@ describe('Mantaray 0.2 Unit Tests', () => {
     node.addFork(path, randAddress)
     expect(() => node.serialize()).toThrowError()
   })
-  
+
   it('checks the expected structure of the sample mantaray node', () => {
     const sampleNode = getSampleMantarayNode0_2()
     const node = sampleNode.node
@@ -48,7 +48,7 @@ describe('Mantaray 0.2 Unit Tests', () => {
     const path2 = sampleNode.paths[1]
     const path3 = sampleNode.paths[2]
     const path5 = sampleNode.paths[4]
-  
+
     expect(Object.keys(node.forks)).toStrictEqual([String(path1[0])]) // first level: 'p'
     const secondLevelFork = node.forks![path5[0]]
     expect(secondLevelFork.prefix).toStrictEqual(new TextEncoder().encode('path'))
@@ -71,14 +71,14 @@ describe('Mantaray 0.2 Unit Tests', () => {
     const sixthLevelNode1 = fifthLevelNode2.forks[path3[20]]
     expect(sixthLevelNode1.prefix).toStrictEqual(new TextEncoder().encode('.ext'))
   })
-  
+
   it('should remove forks', () => {
     const sampleNode = getSampleMantarayNode0_2()
     const node = sampleNode.node
     // save sample node
     const path1 = sampleNode.paths[0]
     const path2 = sampleNode.paths[1]
-  
+
     // non existing path check
     expect(() => node.removePath(new Uint8Array([0, 1, 2]))).toThrowError()
     // node where the fork set will change

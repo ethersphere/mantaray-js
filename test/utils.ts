@@ -1,6 +1,6 @@
 import { Utils } from '@ethersphere/bee-js'
-import { MantarayNode, Mantaray0_2, Mantaray1_0, Reference, MetadataMapping } from '../src'
-import { MantarayFork } from '../src/node-1_0'
+import { MantarayNode, MantarayV0_2, MantarayV1, Reference, MetadataMapping } from '../src'
+import { MantarayFork } from '../src/node-v1'
 import { equalBytes, gen32Bytes } from '../src/utils'
 
 const { hexToBytes } = Utils.Hex
@@ -9,8 +9,8 @@ declare global {
   // eslint-disable-next-line @typescript-eslint/no-namespace
   namespace jest {
     interface Matchers<R> {
-      toBeEqualNode0_2(compareTo: Mantaray0_2.MantarayNode): R
-      toBeEqualNode1_0(compareTo: Mantaray1_0.MantarayNode): R
+      toBeEqualNode0_2(compareTo: MantarayV0_2.MantarayNode): R
+      toBeEqualNode1_0(compareTo: MantarayV1.MantarayNode): R
     }
   }
 }
@@ -33,7 +33,7 @@ export function commonMatchers(): void {
       }
 
       try {
-        Mantaray0_2.equalNodes(received, compareTo)
+        MantarayV0_2.equalNodes(received, compareTo)
       } catch (e) {
         result.pass = false
         result.message = () => e.message
@@ -60,7 +60,7 @@ export function commonMatchers(): void {
 }
 
 export function getSampleMantarayNode0_2(): { node: MantarayNode<'0.2'>; paths: Uint8Array[] } {
-  const node: MantarayNode<'0.2'> = new Mantaray0_2.MantarayNode()
+  const node: MantarayNode<'0.2'> = new MantarayV0_2.MantarayNode()
   const randAddress = gen32Bytes()
   node.setEntry = randAddress
   const path1 = new TextEncoder().encode('path1/valami/elso')
@@ -103,7 +103,7 @@ type SampleForks1_0 = {
 }
 
 export function getSampleMantarayNode1_0(): { node: MantarayNode<'1.0'>; forks: SampleForks1_0 } {
-  const node: MantarayNode<'1.0'> = new Mantaray1_0.MantarayNode()
+  const node: MantarayNode<'1.0'> = new MantarayV1.MantarayNode()
   const forks: SampleForks1_0 = {
     fork1: {
       path: new TextEncoder().encode('path1/valami/elso'),
