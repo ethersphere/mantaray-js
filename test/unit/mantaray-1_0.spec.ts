@@ -18,8 +18,11 @@ describe('Mantaray 1.0 Unit Tests', () => {
     const node = initManifestNode({ version: '1.0' })
     const randAddress = gen32Bytes()
     node.entry = randAddress
+    const obfuscationKey = gen32Bytes()
+    node.obfuscationKey = obfuscationKey
     const nodeAgain = serialiseDeserialise(node)
     expect(randAddress).toStrictEqual(nodeAgain.entry)
+    expect(obfuscationKey).toStrictEqual(nodeAgain.obfuscationKey)
   })
 
   it('should throw exception on serialize if there were no storage saves before', () => {
