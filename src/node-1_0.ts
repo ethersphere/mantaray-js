@@ -79,6 +79,10 @@ export class MantarayFork {
     const prefixLengthBytes = new Uint8Array(1)
     prefixLengthBytes[0] = this.prefix.length // on addFork it is always trimmed under `prefixMax`
 
+    if (this.node.isContinuousNode && this.prefix.length === 31) {
+      prefixLengthBytes[0] += 1 // continuous node rule
+    }
+
     const prefixBytes = new Uint8Array(nodeForkSizes.prefixMax)
     prefixBytes.set(this.prefix)
 
@@ -101,7 +105,7 @@ export class MantarayFork {
     let prefixLength = data[0]
     let continuousNode = false
 
-    if (prefixLength === 0 || prefixLength > nodeForkSizes.prefixMax) {
+    if (prefixLength > nodeForkSizes.prefixMax) {
       prefixLength = 31
       continuousNode = true
     }
