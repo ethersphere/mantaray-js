@@ -1,6 +1,6 @@
 import { Utils } from '@ethersphere/bee-js'
 import { MantarayNode, MantarayV0_2, MantarayV1, Reference, MetadataMapping } from '../src'
-import { MantarayFork } from '../src/node-v1'
+import { MantarayFork } from '../src/mantaray-v1'
 import { equalBytes, gen32Bytes } from '../src/utils'
 
 const { hexToBytes } = Utils.Hex

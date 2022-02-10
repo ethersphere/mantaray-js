@@ -1,6 +1,6 @@
 import { Bee, Utils } from '@ethersphere/bee-js'
 import { MantarayV1 } from '../../src'
-import { loadAllNodes } from '../../src/node-v1'
+import { loadAllNodes } from '../../src/mantaray-v1'
 import type { Reference } from '../../src/types'
 import { commonMatchers, getSampleMantarayNode1_0 } from '../utils'
 

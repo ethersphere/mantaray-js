@@ -1,5 +1,5 @@
 import { initManifestNode, MantarayV0_2 } from '../../src'
-import { checkForSeparator } from '../../src/node-v0_2'
+import { checkForSeparator } from '../../src/mantaray-v0_2'
 import { gen32Bytes } from '../../src/utils'
 import { getSampleMantarayNode0_2 } from '../utils'
 

@@ -1,5 +1,5 @@
-import { MantarayNode as MantarayNodeV0_2 } from './node-v0_2'
-import { MantarayNode as MantarayNodeV1 } from './node-v1'
+import { MantarayNode as MantarayNodeV0_2 } from './mantaray-v0_2'
+import { MantarayNode as MantarayNodeV1 } from './mantaray-v1'
 import { Bytes, MarshalVersion } from './types'
 import { gen32Bytes } from './utils'
 
@@ -36,7 +36,7 @@ export type MantarayNode<Version extends MarshalVersion | undefined = undefined>
   ? MantarayNodeV0_2 | MantarayNodeV1
   : never
 
-export * as MantarayV0_2 from './node-v0_2'
+export * as MantarayV0_2 from './mantaray-v0_2'
 export * from './types'
 export * as Utils from './utils'
-export * as MantarayV1 from './node-v1'
+export * as MantarayV1 from './mantaray-v1'
