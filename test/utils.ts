@@ -1,6 +1,7 @@
 import { Utils } from '@ethersphere/bee-js'
 import { MantarayNode, Mantaray0_2, Mantaray1_0, Reference, MetadataMapping } from '../src'
-import { gen32Bytes } from '../src/utils'
+import { MantarayFork } from '../src/node-1_0'
+import { equalBytes, gen32Bytes } from '../src/utils'
 
 const { hexToBytes } = Utils.Hex
 
@@ -11,6 +12,12 @@ declare global {
       toBeEqualNode0_2(compareTo: Mantaray0_2.MantarayNode): R
       toBeEqualNode1_0(compareTo: Mantaray1_0.MantarayNode): R
     }
+  }
+}
+
+class NodesNotSame extends Error {
+  constructor(error: string, path: string) {
+    super(`"Error: ${error} \n\ton path: ${path}`)
   }
 }
 
@@ -41,7 +48,7 @@ export function commonMatchers(): void {
       }
 
       try {
-        Mantaray1_0.equalNodes(received, compareTo)
+        equalNodes1_0(received, compareTo)
       } catch (e) {
         result.pass = false
         result.message = () => e.message
@@ -131,5 +138,103 @@ export function getSampleMantarayNode1_0(): { node: MantarayNode<'1.0'>; forks: 
   return {
     node,
     forks,
+  }
+}
+
+/**
+ * Throws an error if the given nodes properties are not equal
+ *
+ * @param a Mantaray node to compare
+ * @param b Mantaray node to compare
+ * @param accumulatedPrefix accumulates the prefix during the recursion
+ * @throws Error if the two nodes properties are not equal recursively
+ */
+// eslint-disable-next-line complexity
+export const equalNodes1_0 = (a: MantarayNode<'1.0'>, b: MantarayNode<'1.0'>, accumulatedPrefix = ''): void | never => {
+  // node flags comparisation
+  if (a.isContinuousNode !== b.isContinuousNode) {
+    throw new NodesNotSame(
+      `Nodes do not have same isContinuousNode flags. a: ${a.isContinuousNode} ; b: ${b.isContinuousNode}`,
+      accumulatedPrefix,
+    )
+  }
+
+  if (a.hasEntry !== b.hasEntry) {
+    throw new NodesNotSame(
+      `Nodes do not have same hasEntry flags. a: ${a.hasEntry} ; b: ${b.hasEntry}`,
+      accumulatedPrefix,
+    )
+  }
+
+  if (Boolean(a.encEntry) !== Boolean(b.encEntry)) {
+    throw new NodesNotSame(
+      `Nodes do not have same encEntry flags. a: ${a.encEntry} ; b: ${b.encEntry}\n\tAccumulated prefix: ${accumulatedPrefix}`,
+      accumulatedPrefix,
+    )
+  }
+
+  if (a.isEdge !== b.isEdge) {
+    throw new NodesNotSame(`Nodes do not have same isEdge flags. a: ${a.isEdge} ; b: ${b.isEdge}`, accumulatedPrefix)
+  }
+
+  if (a.forkMetadataSegmentSize !== b.forkMetadataSegmentSize) {
+    throw new NodesNotSame(
+      `Nodes do not have same forkMetadataSegmentSize. a: ${a.forkMetadataSegmentSize} ; b: ${b.forkMetadataSegmentSize}`,
+      accumulatedPrefix,
+    )
+  }
+
+  // node metadata comparisation
+  if (!a.nodeMetadata !== !b.nodeMetadata) {
+    throw new NodesNotSame(
+      `One of the nodes does not have nodeMetadata defined. a: ${a.nodeMetadata} b: ${b.nodeMetadata}`,
+      accumulatedPrefix,
+    )
+  }
+
+  if (a.nodeMetadata && b.nodeMetadata) {
+    expect(a.nodeMetadata).toStrictEqual(b.nodeMetadata)
+  }
+
+  // node metadata comparisation
+  if (!a.forkMetadata !== !b.forkMetadata) {
+    throw new NodesNotSame(
+      `One of the nodes does not have forkMetadata defined. a: ${a.forkMetadata} b: ${b.forkMetadata}`,
+      accumulatedPrefix,
+    )
+  }
+
+  if (a.forkMetadata && b.forkMetadata) {
+    expect(a.forkMetadata).toStrictEqual(b.forkMetadata)
+  }
+
+  // node entry comparisation
+  if (!equalBytes(a.entry || new Uint8Array(0), b.entry || new Uint8Array(0))) {
+    throw new NodesNotSame(`Nodes do not have same entries. a: ${a.entry} ; b: ${b.entry}`, accumulatedPrefix)
+  }
+
+  if (!a.forks) return
+
+  // node fork comparisation
+  const aKeys = Object.keys(a.forks)
+
+  if (!b.forks || aKeys.length !== Object.keys(b.forks).length) {
+    throw new NodesNotSame(
+      `Nodes do not have same fork length on equality check at prefix ${accumulatedPrefix}`,
+      accumulatedPrefix,
+    )
+  }
+
+  for (const key of aKeys) {
+    const aFork: MantarayFork = a.forks[Number(key)]
+    const bFork: MantarayFork = b.forks[Number(key)]
+    const prefix = aFork.prefix
+    const prefixString = new TextDecoder().decode(prefix)
+
+    if (!equalBytes(prefix, bFork.prefix)) {
+      throw new NodesNotSame(`Nodes do not have same prefix under the same key "${key}"`, accumulatedPrefix)
+    }
+
+    equalNodes1_0(aFork.node, bFork.node, accumulatedPrefix + prefixString)
   }
 }

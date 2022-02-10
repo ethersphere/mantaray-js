@@ -14,7 +14,6 @@ import {
   serializeMetadataInSegment,
   serializeVersion,
 } from './utils'
-import deepEqual from 'deep-equal'
 
 type ForkMapping = { [key: number]: MantarayFork }
 type RecursiveSaveReturnType = { reference: Reference; changed: boolean }
@@ -59,12 +58,6 @@ class EmptyPathError extends Error {
 class UndefinedField extends Error {
   constructor(field: string) {
     super(`"${field}" field is not initialized.`)
-  }
-}
-
-class NodesNotSame extends Error {
-  constructor(error: string, path: string) {
-    super(`"Error: ${error} \n\ton path: ${path}`)
   }
 }
 
@@ -678,113 +671,5 @@ export async function loadAllNodes(storageLoader: StorageLoader, node: MantarayN
   for (const fork of Object.values(node.forks)) {
     if (fork.node.contentAddress) await fork.node.load(storageLoader, fork.node.contentAddress)
     await loadAllNodes(storageLoader, fork.node)
-  }
-}
-
-/**
- * Throws an error if the given nodes properties are not equal
- *
- * @param a Mantaray node to compare
- * @param b Mantaray node to compare
- * @param accumulatedPrefix accumulates the prefix during the recursion
- * @throws Error if the two nodes properties are not equal recursively
- */
-// eslint-disable-next-line complexity
-export const equalNodes = (a: MantarayNode, b: MantarayNode, accumulatedPrefix = ''): void | never => {
-  // node flags comparisation
-  if (a.isContinuousNode !== b.isContinuousNode) {
-    throw new NodesNotSame(
-      `Nodes do not have same isContinuousNode flags. a: ${a.isContinuousNode} ; b: ${b.isContinuousNode}`,
-      accumulatedPrefix,
-    )
-  }
-
-  if (a.hasEntry !== b.hasEntry) {
-    throw new NodesNotSame(
-      `Nodes do not have same hasEntry flags. a: ${a.hasEntry} ; b: ${b.hasEntry}`,
-      accumulatedPrefix,
-    )
-  }
-
-  if (Boolean(a.encEntry) !== Boolean(b.encEntry)) {
-    throw new NodesNotSame(
-      `Nodes do not have same encEntry flags. a: ${a.encEntry} ; b: ${b.encEntry}\n\tAccumulated prefix: ${accumulatedPrefix}`,
-      accumulatedPrefix,
-    )
-  }
-
-  if (a.isEdge !== b.isEdge) {
-    throw new NodesNotSame(`Nodes do not have same isEdge flags. a: ${a.isEdge} ; b: ${b.isEdge}`, accumulatedPrefix)
-  }
-
-  if (a.forkMetadataSegmentSize !== b.forkMetadataSegmentSize) {
-    throw new NodesNotSame(
-      `Nodes do not have same forkMetadataSegmentSize. a: ${a.forkMetadataSegmentSize} ; b: ${b.forkMetadataSegmentSize}`,
-      accumulatedPrefix,
-    )
-  }
-
-  // node metadata comparisation
-  if (!a.nodeMetadata !== !b.nodeMetadata) {
-    throw new NodesNotSame(
-      `One of the nodes does not have nodeMetadata defined. a: ${a.nodeMetadata} b: ${b.nodeMetadata}`,
-      accumulatedPrefix,
-    )
-  }
-
-  if (a.nodeMetadata && b.nodeMetadata && !deepEqual(a.nodeMetadata, b.nodeMetadata)) {
-    throw new NodesNotSame(
-      `Nodes do not have same nodeMetadata. a: ${JSON.stringify(a.nodeMetadata)} ; b: ${JSON.stringify(
-        b.nodeMetadata,
-      )}`,
-      accumulatedPrefix,
-    )
-  }
-
-  // node metadata comparisation
-  if (!a.forkMetadata !== !b.forkMetadata) {
-    throw new NodesNotSame(
-      `One of the nodes does not have forkMetadata defined. a: ${a.forkMetadata} b: ${b.forkMetadata}`,
-      accumulatedPrefix,
-    )
-  }
-
-  if (a.forkMetadata && b.forkMetadata && !deepEqual(a.forkMetadata, b.forkMetadata)) {
-    throw new NodesNotSame(
-      `Nodes do not have same forkMetadata. a: ${JSON.stringify(a.forkMetadata)} ; b: ${JSON.stringify(
-        b.forkMetadata,
-      )}`,
-      accumulatedPrefix,
-    )
-  }
-
-  // node entry comparisation
-  if (!equalBytes(a.entry || new Uint8Array(0), b.entry || new Uint8Array(0))) {
-    throw new NodesNotSame(`Nodes do not have same entries. a: ${a.entry} ; b: ${b.entry}`, accumulatedPrefix)
-  }
-
-  if (!a.forks) return
-
-  // node fork comparisation
-  const aKeys = Object.keys(a.forks)
-
-  if (!b.forks || aKeys.length !== Object.keys(b.forks).length) {
-    throw new NodesNotSame(
-      `Nodes do not have same fork length on equality check at prefix ${accumulatedPrefix}`,
-      accumulatedPrefix,
-    )
-  }
-
-  for (const key of aKeys) {
-    const aFork: MantarayFork = a.forks[Number(key)]
-    const bFork: MantarayFork = b.forks[Number(key)]
-    const prefix = aFork.prefix
-    const prefixString = new TextDecoder().decode(prefix)
-
-    if (!equalBytes(prefix, bFork.prefix)) {
-      throw new NodesNotSame(`Nodes do not have same prefix under the same key "${key}"`, accumulatedPrefix)
-    }
-
-    equalNodes(aFork.node, bFork.node, accumulatedPrefix + prefixString)
   }
 }
