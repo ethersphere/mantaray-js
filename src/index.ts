@@ -20,7 +20,7 @@ export function initManifestNode<Version extends MarshalVersion>(options?: {
 
   if (version === '1.0') {
     const manifestNode1_0 = new MantarayNode1_0()
-    manifestNode1_0.setObfuscationKey = obfuscationKey
+    manifestNode1_0.obfuscationKey = obfuscationKey
 
     return manifestNode1_0 as MantarayNode<Version>
   }

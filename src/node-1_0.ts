@@ -89,7 +89,7 @@ export class MantarayFork {
     const prefixBytes = new Uint8Array(nodeForkSizes.prefixMax)
     prefixBytes.set(this.prefix)
 
-    const mantarayReference: Reference | undefined = this.node.getContentAddress
+    const mantarayReference: Reference | undefined = this.node.contentAddress
 
     if (!mantarayReference) throw Error('cannot serialize MantarayFork because it does not have contentAddress')
 
@@ -129,24 +129,24 @@ export class MantarayFork {
     }
 
     // contentAddress set always at the end of the deserialisation because the dirty flag is based on this as well
-    node.setContentAddress = contentAddress
+    node.contentAddress = contentAddress
 
     return fork
   }
 }
 
 export class MantarayNode {
-  private obfuscationKey: Bytes<32>
+  private _obfuscationKey: Bytes<32>
   /** whether the node has entry field */
-  private hasEntry: boolean
+  private _hasEntry: boolean
   /** the entry field is an encrypted reference and 64 bytes long */
-  private encEntry: boolean
+  private _encEntry: boolean
   /** whether the node has additional forks or not */
-  private isEdge: boolean
+  private _isEdge: boolean
   /** reference of a loaded manifest node. if undefined, the node can be handled as `dirty` */
-  private contentAddress?: Reference
+  private _contentAddress?: Reference
   /** reference of a content that the manifest refers to */
-  private entry?: Reference
+  private _entry?: Reference
   private _nodeMetadata?: MetadataMapping
   /**
    * metadata about the node sersialised on the fork level.
@@ -164,33 +164,51 @@ export class MantarayNode {
   public forks?: ForkMapping
 
   public constructor() {
-    this.hasEntry = false
-    this.encEntry = false
-    this.isEdge = false
+    this._hasEntry = false
+    this._encEntry = false
+    this._isEdge = false
     this.isContinuousNode = false
     this._forkMetadataSegmentSize = 0
-    this.obfuscationKey = new Uint8Array(32) as Bytes<32>
+    this._obfuscationKey = new Uint8Array(32) as Bytes<32>
   }
 
   /// Setters/getters
 
-  public set setContentAddress(contentAddress: Reference) {
+  public set contentAddress(contentAddress: Reference | undefined) {
+    if (!contentAddress) {
+      this._contentAddress = undefined
+
+      return
+    }
     checkReference(contentAddress)
 
-    this.contentAddress = contentAddress
+    this._contentAddress = contentAddress
   }
 
-  public set setEntry(entry: Reference) {
+  public get contentAddress(): Reference | undefined {
+    return this._contentAddress
+  }
+
+  public set entry(entry: Reference | undefined) {
+    if (!entry) {
+      this._hasEntry = false
+
+      return
+    }
     checkReference(entry)
 
-    this.entry = entry
-    this.hasEntry = true
+    this._entry = entry
+    this._hasEntry = true
 
-    if (entry.length === 64) this.encEntry = true
+    if (entry.length === 64) this._encEntry = true
     this.makeDirty()
   }
 
-  public set setObfuscationKey(obfuscationKey: Bytes<32>) {
+  public get entry(): Reference | undefined {
+    return this._entry
+  }
+
+  public set obfuscationKey(obfuscationKey: Bytes<32>) {
     if (!(obfuscationKey instanceof Uint8Array)) {
       throw new Error('Given obfuscationKey is not an Uint8Array instance.')
     }
@@ -199,8 +217,12 @@ export class MantarayNode {
       throw new Error(`Wrong obfuscationKey length. Entry only can be 32 length in bytes`)
     }
 
-    this.obfuscationKey = obfuscationKey
+    this._obfuscationKey = obfuscationKey
     this.makeDirty()
+  }
+
+  public get obfuscationKey(): Bytes<32> {
+    return this._obfuscationKey
   }
 
   public set nodeMetadata(metadata: MetadataMapping | undefined) {
@@ -230,28 +252,16 @@ export class MantarayNode {
     return this._forkMetadataSegmentSize
   }
 
-  public get getObfuscationKey(): Bytes<32> | undefined {
-    return this.obfuscationKey
+  public get isEdge(): boolean {
+    return this._isEdge
   }
 
-  public get getEntry(): Reference | undefined {
-    return this.entry
+  public get hasEntry(): boolean {
+    return this._hasEntry
   }
 
-  public get getContentAddress(): Reference | undefined {
-    return this.contentAddress
-  }
-
-  public get getIsEdge(): boolean {
-    return this.isEdge
-  }
-
-  public get getHasEntry(): boolean {
-    return this.hasEntry
-  }
-
-  public get getEncEntry(): boolean {
-    return this.encEntry
+  public get encEntry(): boolean {
+    return this._encEntry
   }
 
   public get metadata(): MetadataMapping | undefined {
@@ -267,7 +277,7 @@ export class MantarayNode {
   /// dirty flag is not necessary to be set
 
   public isValueType(): boolean {
-    return this.hasEntry
+    return this._hasEntry
   }
 
   /**
@@ -293,7 +303,7 @@ export class MantarayNode {
     const forkMetadata: MetadataMapping | undefined = attributes?.forkMetadata
 
     if (path.length === 0) {
-      if (entry) this.setEntry = entry
+      if (entry) this.entry = entry
 
       this.nodeMetadata = nodeMetadata
       this.forkMetadata = forkMetadata
@@ -310,8 +320,8 @@ export class MantarayNode {
     if (!fork) {
       const newNode = new MantarayNode()
 
-      if (!equalBytes(this.obfuscationKey, null32Bytes)) {
-        newNode.setObfuscationKey = gen32Bytes()
+      if (!equalBytes(this._obfuscationKey, null32Bytes)) {
+        newNode.obfuscationKey = gen32Bytes()
       }
 
       // Continuous node
@@ -321,21 +331,21 @@ export class MantarayNode {
         newNode.addFork(rest, attributes)
         newNode.isContinuousNode = true
         this.forks[path[0]] = new MantarayFork(prefix, newNode)
-        this.isEdge = true
+        this._isEdge = true
         this.makeDirty()
 
         return
       }
 
       // create non-continuous node
-      if (entry) newNode.setEntry = entry
+      if (entry) newNode.entry = entry
 
       newNode.forkMetadata = forkMetadata
       newNode.nodeMetadata = nodeMetadata
 
       this.forks[path[0]] = new MantarayFork(path, newNode)
       this.makeDirty()
-      this.isEdge = true
+      this._isEdge = true
 
       return
     }
@@ -352,13 +362,13 @@ export class MantarayNode {
     if (restPath.length > 0) {
       // create new node for the common path
       newNode = new MantarayNode()
-      newNode.setObfuscationKey = equalBytes(this.obfuscationKey, null32Bytes)
+      newNode.obfuscationKey = equalBytes(this._obfuscationKey, null32Bytes)
         ? (new Uint8Array(32) as Bytes<32>)
         : gen32Bytes()
       newNode.forks = {}
       //TODO handle continuous node (shorten path)
       newNode.forks[restPath[0]] = new MantarayFork(restPath, fork.node) // copy old parent node to its remaining path
-      newNode.isEdge = true
+      newNode._isEdge = true
     }
 
     // NOTE: special case on edge split
@@ -366,7 +376,7 @@ export class MantarayNode {
     // newNode's prefix is a subset of the given `path`, here the desired fork will be added with the truncated path
     newNode.addFork(path.slice(commonPath.length), attributes)
     this.forks[path[0]] = new MantarayFork(commonPath, newNode)
-    this.isEdge = true
+    this._isEdge = true
 
     this.makeDirty()
   }
@@ -435,7 +445,7 @@ export class MantarayNode {
     const data = await storageLoader(reference)
     this.deserialize(data)
 
-    this.setContentAddress = reference
+    this.contentAddress = reference
   }
 
   /**
@@ -449,18 +459,18 @@ export class MantarayNode {
   }
 
   public isDirty(): boolean {
-    return this.contentAddress === undefined
+    return this._contentAddress === undefined
   }
 
   public makeDirty(): void {
-    this.contentAddress = undefined
+    this._contentAddress = undefined
   }
 
   public serialize(options?: { autoForkMetadataSize?: boolean }): Uint8Array {
-    const obfuscationKey = this.obfuscationKey || new Uint8Array(32)
+    const obfuscationKey = this._obfuscationKey || new Uint8Array(32)
 
     if (!this.forks) {
-      if (!this.entry) throw new UndefinedField('entry')
+      if (!this._entry) throw new UndefinedField('entry')
       this.forks = {} //if there were no forks initialized it is not indended to be
     }
 
@@ -469,7 +479,7 @@ export class MantarayNode {
     const versionBytes: Bytes<31> = serializeVersion(version)
 
     /// Entry
-    const entry = this.entry || new Uint8Array()
+    const entry = this._entry || new Uint8Array()
 
     /// Forks and ForkIndexBytes
 
@@ -477,7 +487,7 @@ export class MantarayNode {
     let indexBytes: Bytes<32> | Bytes<0> = new Uint8Array() as Bytes<0>
     const forkSerializations: Uint8Array[] = []
 
-    if (this.isEdge) {
+    if (this._isEdge) {
       const autoForkMetadataSize = true
       const index = new IndexBytes()
       for (const [forkIndex, fork] of Object.entries(this.forks)) {
@@ -537,9 +547,9 @@ export class MantarayNode {
 
     if (data.length < nodeHeaderSize) throw Error('The serialised input is too short')
 
-    this.obfuscationKey = new Uint8Array(data.slice(0, nodeHeaderSizes.obfuscationKey)) as Bytes<32>
+    this._obfuscationKey = new Uint8Array(data.slice(0, nodeHeaderSizes.obfuscationKey)) as Bytes<32>
     // perform XOR decryption on bytes after obfuscation key
-    encryptDecrypt(this.obfuscationKey, data, this.obfuscationKey.length)
+    encryptDecrypt(this._obfuscationKey, data, this._obfuscationKey.length)
 
     const versionHash = data.slice(
       nodeHeaderSizes.obfuscationKey,
@@ -556,18 +566,18 @@ export class MantarayNode {
     /// Entry
     let refBytesSize = 0
 
-    if (this.hasEntry) {
-      if (this.encEntry) {
+    if (this._hasEntry) {
+      if (this._encEntry) {
         refBytesSize = 64
       } else {
         refBytesSize = 32
       }
-      this.setEntry = data.slice(nodeHeaderSize, nodeHeaderSize + refBytesSize) as Reference
+      this.entry = data.slice(nodeHeaderSize, nodeHeaderSize + refBytesSize) as Reference
     }
     let offset = nodeHeaderSize + refBytesSize
 
     /// Fork
-    if (this.isEdge) {
+    if (this._isEdge) {
       /// Fork Bytes index mapping
       const indexBytes = data.slice(offset, offset + 32) as Bytes<32>
       const indexForks = new IndexBytes()
@@ -576,14 +586,14 @@ export class MantarayNode {
 
       /// Forks
       this.forks = {}
-      const forkSize = nodeForkSizes.preReference + (this.encEntry ? 64 : 32) + this._forkMetadataSegmentSize * 32
+      const forkSize = nodeForkSizes.preReference + (this._encEntry ? 64 : 32) + this._forkMetadataSegmentSize * 32
       indexForks.forEach(byte => {
         if (data.length < offset + forkSize) {
           throw Error(`There is not enough size to read fork data at offset ${offset}`)
         }
 
         const forkBytes = data.slice(offset, offset + forkSize)
-        const fork = MantarayFork.deserialize(forkBytes, this.encEntry)
+        const fork = MantarayFork.deserialize(forkBytes, this._encEntry)
 
         this.forks![byte] = fork
 
@@ -605,18 +615,18 @@ export class MantarayNode {
   }
 
   private serializeFeatures(): Bytes<1> {
-    if (this.encEntry && !this.hasEntry) {
+    if (this._encEntry && !this._hasEntry) {
       throw new Error('encEntry is true when hasEntry is false at serialisation')
     }
 
     let nodeFeautes = this._forkMetadataSegmentSize
     // add flags
     nodeFeautes = nodeFeautes << 1
-    nodeFeautes += this.isEdge ? 1 : 0
+    nodeFeautes += this._isEdge ? 1 : 0
     nodeFeautes = nodeFeautes << 1
-    nodeFeautes += this.encEntry ? 1 : 0
+    nodeFeautes += this._encEntry ? 1 : 0
     nodeFeautes = nodeFeautes << 1
-    nodeFeautes += this.hasEntry ? 1 : 0
+    nodeFeautes += this._hasEntry ? 1 : 0
 
     const bytes = new Uint8Array(1) as Bytes<1>
     bytes[0] = nodeFeautes
@@ -626,11 +636,11 @@ export class MantarayNode {
 
   private deserializeFeatures(nodeFeaturesByte: number) {
     // deserialize flags
-    this.hasEntry = nodeFeaturesByte % 2 === 1
+    this._hasEntry = nodeFeaturesByte % 2 === 1
     nodeFeaturesByte = nodeFeaturesByte >> 1
-    this.encEntry = nodeFeaturesByte % 2 === 1
+    this._encEntry = nodeFeaturesByte % 2 === 1
     nodeFeaturesByte = nodeFeaturesByte >> 1
-    this.isEdge = nodeFeaturesByte % 2 === 1
+    this._isEdge = nodeFeaturesByte % 2 === 1
     nodeFeaturesByte = nodeFeaturesByte >> 1
 
     // deserialize segmentsize
@@ -647,15 +657,15 @@ export class MantarayNode {
     }
     const savedReturns = await Promise.all(savePromises)
 
-    if (this.contentAddress && savedReturns.every(v => !v.changed)) {
-      return { reference: this.contentAddress, changed: false }
+    if (this._contentAddress && savedReturns.every(v => !v.changed)) {
+      return { reference: this._contentAddress, changed: false }
     }
 
     // save the actual manifest as well
     const data = this.serialize()
     const reference = await storageSaver(data)
 
-    this.setContentAddress = reference
+    this.contentAddress = reference
 
     return { reference, changed: true }
   }
@@ -666,7 +676,7 @@ export async function loadAllNodes(storageLoader: StorageLoader, node: MantarayN
   if (!node.forks) return
 
   for (const fork of Object.values(node.forks)) {
-    if (fork.node.getContentAddress) await fork.node.load(storageLoader, fork.node.getContentAddress)
+    if (fork.node.contentAddress) await fork.node.load(storageLoader, fork.node.contentAddress)
     await loadAllNodes(storageLoader, fork.node)
   }
 }
@@ -689,25 +699,22 @@ export const equalNodes = (a: MantarayNode, b: MantarayNode, accumulatedPrefix =
     )
   }
 
-  if (a.getHasEntry !== b.getHasEntry) {
+  if (a.hasEntry !== b.hasEntry) {
     throw new NodesNotSame(
-      `Nodes do not have same hasEntry flags. a: ${a.getHasEntry} ; b: ${b.getHasEntry}`,
+      `Nodes do not have same hasEntry flags. a: ${a.hasEntry} ; b: ${b.hasEntry}`,
       accumulatedPrefix,
     )
   }
 
-  if (Boolean(a.getEncEntry) !== Boolean(b.getEncEntry)) {
+  if (Boolean(a.encEntry) !== Boolean(b.encEntry)) {
     throw new NodesNotSame(
-      `Nodes do not have same encEntry flags. a: ${a.getEncEntry} ; b: ${b.getEncEntry}\n\tAccumulated prefix: ${accumulatedPrefix}`,
+      `Nodes do not have same encEntry flags. a: ${a.encEntry} ; b: ${b.encEntry}\n\tAccumulated prefix: ${accumulatedPrefix}`,
       accumulatedPrefix,
     )
   }
 
-  if (a.getIsEdge !== b.getIsEdge) {
-    throw new NodesNotSame(
-      `Nodes do not have same isEdge flags. a: ${a.getIsEdge} ; b: ${b.getIsEdge}`,
-      accumulatedPrefix,
-    )
+  if (a.isEdge !== b.isEdge) {
+    throw new NodesNotSame(`Nodes do not have same isEdge flags. a: ${a.isEdge} ; b: ${b.isEdge}`, accumulatedPrefix)
   }
 
   if (a.forkMetadataSegmentSize !== b.forkMetadataSegmentSize) {
@@ -752,8 +759,8 @@ export const equalNodes = (a: MantarayNode, b: MantarayNode, accumulatedPrefix =
   }
 
   // node entry comparisation
-  if (!equalBytes(a.getEntry || new Uint8Array(0), b.getEntry || new Uint8Array(0))) {
-    throw new NodesNotSame(`Nodes do not have same entries. a: ${a.getEntry} ; b: ${b.getEntry}`, accumulatedPrefix)
+  if (!equalBytes(a.entry || new Uint8Array(0), b.entry || new Uint8Array(0))) {
+    throw new NodesNotSame(`Nodes do not have same entries. a: ${a.entry} ; b: ${b.entry}`, accumulatedPrefix)
   }
 
   if (!a.forks) return
