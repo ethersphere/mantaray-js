@@ -128,30 +128,44 @@ describe('Mantaray 1.0 Unit Tests', () => {
   it('checks the expected structure of the sample mantaray node', () => {
     const sampleNode = getSampleMantarayNode1_0()
     const node = sampleNode.node
-    const { fork1, fork2, fork3, fork5 } = sampleNode.forks
+    const { fork1, fork2, fork3, fork5, fork6 } = sampleNode.forks
     const path1 = fork1.path
     const path2 = fork2.path
     const path3 = fork3.path
     const path5 = fork5.path
+    const path6 = fork6.path
 
     expect(Object.keys(node.forks)).toStrictEqual([String(path1[0])]) // first level: 'p'
     const secondLevelFork = node.forks![path5[0]]
     expect(secondLevelFork.prefix).toStrictEqual(new TextEncoder().encode('path'))
     const secondLevelNode = secondLevelFork.node
-    expect(Object.keys(secondLevelNode.forks)).toStrictEqual([String(path1[4]), String(path5[4])]) // second level: '1', '2'
+    expect(Object.keys(secondLevelNode.forks)).toStrictEqual([String(path1[4]), String(path5[4]), String(path6[4])]) // second level: '1', '2', '3'
     const thirdLevelFork2 = secondLevelNode.forks[path5[4]]
     expect(thirdLevelFork2.prefix).toStrictEqual(new Uint8Array([path5[4]]))
     const thirdLevelFork1 = secondLevelNode.forks[path1[4]]
     expect(thirdLevelFork1.prefix).toStrictEqual(new TextEncoder().encode('1/valami'))
     const thirdLevelNode1 = thirdLevelFork1.node
     expect(Object.keys(thirdLevelNode1.forks)).toStrictEqual([String(path1[12])]) // third level 1: '/'
+    const thirdLevelFork3 = secondLevelNode.forks[path6[4]] // 'path3'
+    expect(thirdLevelFork3.prefix).toStrictEqual(new TextEncoder().encode('3/reallylongpathtotestcontinuou'))
+    const thirdLevelNode3 = thirdLevelFork3.node
+    expect(thirdLevelNode3.isContinuousNode).toBe(true)
+    expect(Object.keys(thirdLevelNode3.forks)).toStrictEqual([String(115)]) //'s' ASCII
     const forthLevelFork1 = thirdLevelNode1.forks![path1[12]]
     expect(forthLevelFork1.prefix).toStrictEqual(new Uint8Array([path1[12]]))
     const fourthLevelNode1 = forthLevelFork1.node
     expect(Object.keys(fourthLevelNode1.forks)).toStrictEqual([String(path1[13]), String(path2[13])]) // fourth level 1: 'e', 'm'
+    const fourthLevelFork2 = thirdLevelNode3.forks![115] // 's' ASCII
+    expect(fourthLevelFork2.prefix).toStrictEqual(new TextEncoder().encode('snodeandasyouseeiamstillwriting'))
+    const fourthLevelNode2 = fourthLevelFork2.node
+    expect(fourthLevelNode2.isContinuousNode).toBe(true)
+    expect(Object.keys(fourthLevelNode2.forks)).toStrictEqual([String(116)]) // 't' ASCII
     const fifthLevelFork2 = fourthLevelNode1.forks![path2[13]]
     expect(fifthLevelFork2.prefix).toStrictEqual(new TextEncoder().encode('masodik'))
     const fifthLevelNode2 = fifthLevelFork2.node
+    const fifthLevelFork3 = fourthLevelNode2.forks![116] // 't' ASCII
+    expect(fifthLevelFork3.prefix).toStrictEqual(new TextEncoder().encode('this'))
+    expect(fifthLevelFork3.node.isContinuousNode).toBe(false)
     expect(Object.keys(fifthLevelNode2.forks)).toStrictEqual([String(path3[20])]) // fifth level 2: '.'
     const sixthLevelNode1 = fifthLevelNode2.forks[path3[20]]
     expect(sixthLevelNode1.prefix).toStrictEqual(new TextEncoder().encode('.ext'))

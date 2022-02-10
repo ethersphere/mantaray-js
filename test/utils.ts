@@ -98,6 +98,8 @@ type SampleForks1_0 = {
   fork4: SampleFork1_0
   /** standalone/empty leaf node */
   fork5: SampleFork1_0
+  /** really long path to create continuous node */
+  fork6: SampleFork1_0
 }
 
 export function getSampleMantarayNode1_0(): { node: MantarayNode<'1.0'>; forks: SampleForks1_0 } {
@@ -125,6 +127,12 @@ export function getSampleMantarayNode1_0(): { node: MantarayNode<'1.0'>; forks: 
     },
     fork5: {
       path: new TextEncoder().encode('path2'),
+    },
+    fork6: {
+      path: new TextEncoder().encode('path3/reallylongpathtotestcontinuousnodeandasyouseeiamstillwritingthis'),
+      entry: hexToBytes<32>(
+        '7c4ccc856f51d0477fde68f9f06bca97c6cd3b4a86b3369ea6489ceaf7b315577d4ccc856f51d0477fde68f9f06bca97c6cd3b4a86b3369ea6489ceaf7b31557',
+      ),
     },
   }
   for (const fork of Object.values(forks)) {
