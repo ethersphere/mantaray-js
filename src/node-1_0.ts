@@ -459,7 +459,7 @@ export class MantarayNode {
     this._contentAddress = undefined
   }
 
-  public serialize(options?: { autoForkMetadataSize?: boolean }): Uint8Array {
+  public serialize(): Uint8Array {
     const obfuscationKey = this._obfuscationKey || new Uint8Array(32)
 
     if (!this.forks) {
