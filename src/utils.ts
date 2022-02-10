@@ -207,13 +207,29 @@ export function serializeVersion(version: MarshalVersion): Bytes<31> {
   return hashBytes.slice(0, 31) as Bytes<31>
 }
 
-export function serializeMetadata(metadata: MetadataMapping): Uint8Array {
+export function serializeMedata(metadata: MetadataMapping): Uint8Array {
   const jsonString = JSON.stringify(metadata)
 
+  return new TextEncoder().encode(jsonString)
+}
+
+/** Returns segment padded stringified JSON byte array */
+export function serializeMetadataInSegment(metadata: MetadataMapping | undefined, segmentSize: number): Uint8Array {
+  if (!metadata) {
+    const bytes = new Uint8Array(segmentSize * 32)
+    bytes.fill(32) // space padding
+
+    return bytes
+  }
+
+  const jsonString = JSON.stringify(metadata)
   const jsonData = new TextEncoder().encode(jsonString)
-  const remainingBytesForSegment = 32 - (jsonData.length % 32)
-  const paddingBytes = new Uint8Array(remainingBytesForSegment)
-  paddingBytes.fill(32) // space
+  const remainingSegmentBytes = segmentSize * 32 - jsonData.length
+
+  if (remainingSegmentBytes < 0) throw new Error('segmentSize for fork metadata is smaller than the jsonData')
+
+  const paddingBytes = new Uint8Array(remainingSegmentBytes)
+  paddingBytes.fill(32) // space padding
 
   return new Uint8Array([...jsonData, ...paddingBytes])
 }
@@ -221,7 +237,7 @@ export function serializeMetadata(metadata: MetadataMapping): Uint8Array {
 /** If the JSON deserialisation of the data is not succesful, it will give back undefined  */
 export function deserializeMetadata(data: Uint8Array): MetadataMapping | undefined {
   try {
-    const jsonString = new TextDecoder().decode(data)
+    const jsonString = new TextDecoder().decode(data).trimEnd()
 
     return JSON.parse(jsonString)
   } catch (e) {

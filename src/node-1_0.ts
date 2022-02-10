@@ -10,7 +10,8 @@ import {
   gen32Bytes,
   IndexBytes,
   null32Bytes,
-  serializeMetadata,
+  serializeMedata,
+  serializeMetadataInSegment,
   serializeVersion,
 } from './utils'
 import deepEqual from 'deep-equal'
@@ -95,9 +96,7 @@ export class MantarayFork {
     const data = new Uint8Array([...prefixLengthBytes, ...prefixBytes, ...mantarayReference])
 
     if (segmentSize > 0) {
-      const jsonString = JSON.stringify(metadata)
-      const metadataBytes = new Uint8Array(segmentSize * 32)
-      metadataBytes.set(new TextEncoder().encode(jsonString))
+      const metadataBytes = serializeMetadataInSegment(metadata, segmentSize)
 
       return new Uint8Array([...data, ...metadataBytes])
     }
@@ -106,14 +105,17 @@ export class MantarayFork {
   }
 
   public static deserialize(data: Uint8Array, encEntry: boolean): MantarayFork {
-    const prefixLength = data[0]
+    let prefixLength = data[0]
+    let continuousNode = false
 
     if (prefixLength === 0 || prefixLength > nodeForkSizes.prefixMax) {
-      throw Error(`Prefix length of fork is greater than ${nodeForkSizes.prefixMax}. Got: ${prefixLength}`)
+      prefixLength = 31
+      continuousNode = true
     }
 
     const prefix = data.slice(nodeForkSizes.prefixLength, nodeForkSizes.prefixLength + prefixLength)
     const node = new MantarayNode()
+    node.isContinuousNode = continuousNode
     const fork = new MantarayFork(prefix, node)
     const entryLength = encEntry ? 64 : 32
     // on deserialisation the content address stores the fork's mantaray node address
@@ -284,19 +286,11 @@ export class MantarayNode {
       entry?: Reference
       nodeMetadata?: MetadataMapping
       forkMetadata?: MetadataMapping
-      autoForkMetadataSize?: boolean
     },
   ): void {
     const entry: Reference | undefined = attributes?.entry
     const nodeMetadata: MetadataMapping | undefined = attributes?.nodeMetadata
     const forkMetadata: MetadataMapping | undefined = attributes?.forkMetadata
-    const autoForkMetadataSize = attributes?.autoForkMetadataSize
-
-    if (autoForkMetadataSize && forkMetadata) {
-      const metadataBytes = serializeMetadata(forkMetadata)
-      this.forkMetadataSegmentSize = Math.ceil(metadataBytes.length / 32)
-    }
-    this.checkForkMetadataSegmentSize(forkMetadata)
 
     if (path.length === 0) {
       if (entry) this.setEntry = entry
@@ -462,7 +456,7 @@ export class MantarayNode {
     this.contentAddress = undefined
   }
 
-  public serialize(): Uint8Array {
+  public serialize(options?: { autoForkMetadataSize?: boolean }): Uint8Array {
     const obfuscationKey = this.obfuscationKey || new Uint8Array(32)
 
     if (!this.forks) {
@@ -473,7 +467,6 @@ export class MantarayNode {
     /// Header
     const version: MarshalVersion = '1.0'
     const versionBytes: Bytes<31> = serializeVersion(version)
-    const nodeFeatures: Bytes<1> = this.serializeFeatures()
 
     /// Entry
     const entry = this.entry || new Uint8Array()
@@ -485,9 +478,20 @@ export class MantarayNode {
     const forkSerializations: Uint8Array[] = []
 
     if (this.isEdge) {
+      const autoForkMetadataSize = true
       const index = new IndexBytes()
-      for (const forkIndex of Object.keys(this.forks)) {
+      for (const [forkIndex, fork] of Object.entries(this.forks)) {
         index.setByte(Number(forkIndex))
+
+        if (autoForkMetadataSize && fork.node.forkMetadata) {
+          // maximum selection among forkMetadata
+          const metadataBytes = serializeMedata(fork.node.forkMetadata)
+          const forkMetadataSegmentSize = Math.ceil(metadataBytes.length / 32)
+
+          if (forkMetadataSegmentSize > this.forkMetadataSegmentSize) {
+            this.forkMetadataSegmentSize = forkMetadataSegmentSize
+          }
+        }
       }
       indexBytes = index.getBytes
 
@@ -499,6 +503,8 @@ export class MantarayNode {
         forkSerializations.push(fork.serialize(this.forkMetadataSegmentSize))
       })
     }
+
+    const nodeFeatures: Bytes<1> = this.serializeFeatures()
 
     /// NodeMetadata
     let nodeMetadataBytes = new Uint8Array(0)
@@ -594,19 +600,6 @@ export class MantarayNode {
         this._nodeMetadata = JSON.parse(jsonString)
       } catch (e) {
         throw new Error(`The byte array is not a valid JSON object in the Mantaray object`)
-      }
-    }
-  }
-
-  private checkForkMetadataSegmentSize(forkMetadata: MetadataMapping | undefined): void {
-    if (forkMetadata) {
-      const metadataBytes = serializeMetadata(forkMetadata)
-
-      if (metadataBytes.length > this._forkMetadataSegmentSize * 32) {
-        throw new Error(
-          `passed forkMetadata byte length ${metadataBytes.length} is bigger` +
-            ` than the allowed fork metadata size ${this._forkMetadataSegmentSize * 32}`,
-        )
       }
     }
   }
