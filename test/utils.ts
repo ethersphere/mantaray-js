@@ -125,7 +125,6 @@ export function getSampleMantarayNode1_0(): { node: MantarayNode<'1.0'>; forks: 
       entry: fork.entry,
       nodeMetadata: fork.nodeMetadata,
       forkMetadata: fork.forkMetadata,
-      autoForkMetadataSize: true,
     })
   }
 
