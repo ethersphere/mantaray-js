@@ -178,6 +178,20 @@ describe('Mantaray 1.0 Unit Tests', () => {
     expect(sixthLevelNode1.prefix).toStrictEqual(new TextEncoder().encode('.ext'))
   })
 
+  it('should handle the continuous node on addFork properly', () => {
+    const sampleNode = getSampleMantarayNode1_0()
+    const node = sampleNode.node
+    const firstContinuousFork = node.getForkAtPath(new TextEncoder().encode('path3/reallylongpathtotestcontinuou'))
+    expect(firstContinuousFork.node.isContinuousNode).toBe(true)
+    expect(firstContinuousFork.prefix).toStrictEqual(new TextEncoder().encode('3/reallylongpathtotestcontinuou'))
+    node.addFork(new TextEncoder().encode('path3/reallylongpathtotestfork'), {
+      nodeMetadata: { test: 'firstForkingOnContinuousNode' },
+    })
+    const firstContinuousForkAgain = node.getForkAtPath(new TextEncoder().encode('path3/reallylongpathtotest'))
+    expect(firstContinuousForkAgain.node.isContinuousNode).toBe(false)
+    expect(firstContinuousForkAgain.prefix).toStrictEqual(new TextEncoder().encode('3/reallylongpathtotest'))
+  })
+
   it('should remove forks', () => {
     const sampleNode = getSampleMantarayNode1_0()
     const node = sampleNode.node
