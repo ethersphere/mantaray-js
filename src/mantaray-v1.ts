@@ -173,7 +173,7 @@ export class MantarayNode {
    * information requires parent node fetch
    */
   public isContinuousNode: boolean
-  /** Forks of the manifest. Has to be initialized with `{}` on load even if there were no forks */
+  /** Forks of the manifest. */
   public forks?: ForkMapping
 
   public constructor() {
@@ -390,8 +390,12 @@ export class MantarayNode {
         newNode.obfuscationKey = obfuscationKeyGenerator()
       }
       newNode.forks = {}
-      //TODO handle continuous node (shorten path)
-      newNode.forks[restPath[0]] = new MantarayFork(restPath, fork.node) // copy old parent node to its remaining path
+      const newFork = new MantarayFork(restPath, fork.node)
+
+      if (fork.node.isContinuousNode) {
+        handleTrimmedContinuousFork(newFork)
+      }
+      newNode.forks[restPath[0]] = newFork // copy old parent node to its remaining path
       newNode._isEdge = true
     }
 
@@ -702,5 +706,33 @@ export async function loadAllNodes(storageLoader: StorageLoader, node: MantarayN
   for (const fork of Object.values(node.forks)) {
     if (fork.node.contentAddress) await fork.node.load(storageLoader, fork.node.contentAddress)
     await loadAllNodes(storageLoader, fork.node)
+  }
+}
+
+/**
+ * Merge the given continuous fork with its only child
+ * Used for tree structure optimalisation on continuous nodes
+ */
+function handleTrimmedContinuousFork(fork: MantarayFork): void {
+  const forkKeys = Object.keys(fork.node.forks || {})
+
+  if (!fork.node.isContinuousNode || forkKeys.length !== 1) {
+    throw new Error(
+      'The given fork is not a valid continuous node\n' +
+        `\tcontinuous node flag: ${fork.node.isContinuousNode}\n` +
+        `\tforkeys: ${forkKeys}`,
+    )
+  }
+
+  const childFork = fork.node.forks![Number(forkKeys[0])]
+  const commonPrefixLength = fork.prefix.length + childFork.prefix.length
+
+  if (commonPrefixLength < 31) {
+    fork.node = childFork.node
+    fork.prefix = new Uint8Array([...fork.prefix, ...childFork.prefix])
+  } else {
+    const remainingPrefixBytes = 31 - fork.prefix.length
+    fork.prefix = new Uint8Array([...fork.prefix, ...childFork.prefix.slice(0, remainingPrefixBytes)])
+    childFork.prefix = new Uint8Array([...childFork.prefix.slice(remainingPrefixBytes)])
   }
 }
