@@ -1,5 +1,5 @@
 import { initManifestNode, MantarayV1 } from '../../src'
-import { gen32Bytes } from '../../src/utils'
+import { gen32Bytes } from '../utils'
 import { getSampleMantarayNode1_0 } from '../utils'
 
 const { MantarayNode } = MantarayV1

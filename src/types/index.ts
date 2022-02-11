@@ -26,3 +26,5 @@ export type StorageHandler = {
   load: StorageLoader
   save: StorageSaver
 }
+
+export type Random32BytesFn = () => Bytes<32>

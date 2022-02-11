@@ -1,14 +1,12 @@
 import { MantarayNode as MantarayNodeV0_2 } from './mantaray-v0_2'
 import { MantarayNode as MantarayNodeV1 } from './mantaray-v1'
-import { Bytes, MarshalVersion } from './types'
-import { gen32Bytes } from './utils'
+import type { Bytes, MarshalVersion } from './types'
 
-/** On the returned Mantaray node you can set either its entry or add fork to it */
 export function initManifestNode<Version extends MarshalVersion>(options?: {
   obfuscationKey?: Bytes<32>
   version?: Version
 }): MantarayNode<Version> {
-  const obfuscationKey: Bytes<32> = options?.obfuscationKey || gen32Bytes()
+  const obfuscationKey: Bytes<32> = options?.obfuscationKey || (new Uint8Array(32) as Bytes<32>)
   const version: MarshalVersion = options?.version ? options!.version : '1.0'
 
   if (version === '0.2') {

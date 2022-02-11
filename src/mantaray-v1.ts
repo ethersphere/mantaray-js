@@ -1,4 +1,12 @@
-import { Bytes, MarshalVersion, MetadataMapping, Reference, StorageLoader, StorageSaver } from './types'
+import type {
+  Bytes,
+  MarshalVersion,
+  MetadataMapping,
+  Random32BytesFn,
+  Reference,
+  StorageLoader,
+  StorageSaver,
+} from './types'
 import {
   checkReference,
   common,
@@ -7,7 +15,6 @@ import {
   equalBytes,
   findIndexOfArray,
   flattenBytesArray,
-  gen32Bytes,
   IndexBytes,
   null32Bytes,
   serializeMedata,
@@ -58,6 +65,15 @@ class EmptyPathError extends Error {
 class UndefinedField extends Error {
   constructor(field: string) {
     super(`"${field}" field is not initialized.`)
+  }
+}
+
+class RandomBytesFnUndefined extends Error {
+  constructor() {
+    super(
+      'Obfuscation key generator is not passed for `addFork` method.\n' +
+        `it is required because its parent node has obfuscation key.`,
+    )
   }
 }
 
@@ -293,11 +309,13 @@ export class MantarayNode {
       entry?: Reference
       nodeMetadata?: MetadataMapping
       forkMetadata?: MetadataMapping
+      obfuscationKeyGenerator?: Random32BytesFn
     },
   ): void {
     const entry: Reference | undefined = attributes?.entry
     const nodeMetadata: MetadataMapping | undefined = attributes?.nodeMetadata
     const forkMetadata: MetadataMapping | undefined = attributes?.forkMetadata
+    const obfuscationKeyGenerator: Random32BytesFn | undefined = attributes?.obfuscationKeyGenerator
 
     if (path.length === 0) {
       if (entry) this.entry = entry
@@ -318,7 +336,10 @@ export class MantarayNode {
       const newNode = new MantarayNode()
 
       if (!equalBytes(this._obfuscationKey, null32Bytes)) {
-        newNode.obfuscationKey = gen32Bytes()
+        if (!obfuscationKeyGenerator) {
+          throw new RandomBytesFnUndefined()
+        }
+        newNode.obfuscationKey = obfuscationKeyGenerator()
       }
 
       // Continuous node
@@ -359,9 +380,15 @@ export class MantarayNode {
     if (restPath.length > 0) {
       // create new node for the common path
       newNode = new MantarayNode()
-      newNode.obfuscationKey = equalBytes(this._obfuscationKey, null32Bytes)
-        ? (new Uint8Array(32) as Bytes<32>)
-        : gen32Bytes()
+
+      if (equalBytes(this._obfuscationKey, null32Bytes)) {
+        newNode.obfuscationKey = new Uint8Array(32) as Bytes<32>
+      } else {
+        if (!obfuscationKeyGenerator) {
+          throw new RandomBytesFnUndefined()
+        }
+        newNode.obfuscationKey = obfuscationKeyGenerator()
+      }
       newNode.forks = {}
       //TODO handle continuous node (shorten path)
       newNode.forks[restPath[0]] = new MantarayFork(restPath, fork.node) // copy old parent node to its remaining path

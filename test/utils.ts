@@ -1,7 +1,7 @@
 import { Utils } from '@ethersphere/bee-js'
-import { MantarayNode, MantarayV0_2, MantarayV1, Reference, MetadataMapping } from '../src'
+import { MantarayNode, MantarayV0_2, MantarayV1, Reference, MetadataMapping, Bytes } from '../src'
 import { MantarayFork } from '../src/mantaray-v1'
-import { equalBytes, gen32Bytes } from '../src/utils'
+import { equalBytes } from '../src/utils'
 
 const { hexToBytes } = Utils.Hex
 
@@ -19,6 +19,36 @@ class NodesNotSame extends Error {
   constructor(error: string, path: string) {
     super(`"Error: ${error} \n\ton path: ${path}`)
   }
+}
+
+/**
+ * Lehmer random number generator with seed (minstd_rand in C++11)
+ * !!! Very fast but not well distributed pseudo-random function !!!
+ *
+ * @param seed Seed for the pseudo-random generator
+ */
+function lrng(seed: number): () => number {
+  return (): number => ((2 ** 31 - 1) & (seed = Math.imul(48271, seed))) / 2 ** 31
+}
+
+/**
+ * Utility function for generating random Buffer
+ * !!! IT IS NOT CRYPTO SAFE !!!
+ * For that use `crypto.randomBytes()`
+ *
+ * @param length Number of bytes to generate
+ * @param seed Seed for the pseudo-random generator
+ */
+export function gen32Bytes(seed?: number): Bytes<32> {
+  if (!seed) seed = new Date().getTime()
+  const rand = lrng(seed)
+  const buf = new Uint8Array(32) as Bytes<32>
+
+  for (let i = 0; i < 32; ++i) {
+    buf[i] = (rand() * 0xff) << 0
+  }
+
+  return buf
 }
 
 /**

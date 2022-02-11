@@ -25,7 +25,6 @@
   ],
   "license": "BSD-3-Clause",
   "dependencies": {
-    "get-random-values": "^1.2.2",
     "js-sha3": "^0.8.0"
   },
   "devDependencies": {
@@ -38,6 +37,7 @@
     "@jest/types": "^27.0.6",
     "@types/deep-equal": "^1.0.1",
     "@types/jest": "^26.0.24",
+    "@types/randombytes": "^2.0.0",
     "@types/terser-webpack-plugin": "^5.0.4",
     "@types/webpack-bundle-analyzer": "^4.4.1",
     "@typescript-eslint/eslint-plugin": "^4.28.3",
