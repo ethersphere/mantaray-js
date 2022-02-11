@@ -1,6 +1,9 @@
 import type { Message } from 'js-sha3'
 import { keccak256 } from 'js-sha3'
 import { Bytes, MarshalVersion, MetadataMapping, Reference } from './types'
+import { Utils } from '@ethersphere/bee-js'
+
+export const { hexToBytes } = Utils.Hex
 
 /** only for comparisation. For assigment always create new uint8array! */
 export const null32Bytes = new Uint8Array(32)
