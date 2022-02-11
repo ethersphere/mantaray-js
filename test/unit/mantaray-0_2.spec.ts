@@ -34,7 +34,7 @@ describe('Mantaray 0.2 Unit Tests', () => {
   })
 
   it('should throw exception on serialize if there were no storage saves before', () => {
-    const node = initManifestNode()
+    const node = initManifestNode({ version: '0.2' })
     const randAddress = gen32Bytes()
     const path = new TextEncoder().encode('vmi')
     node.addFork(path, randAddress)

@@ -2,7 +2,7 @@ import { MantarayNode as MantarayNodeV0_2 } from './mantaray-v0_2'
 import { MantarayNode as MantarayNodeV1 } from './mantaray-v1'
 import type { Bytes, MarshalVersion } from './types'
 
-export function initManifestNode<Version extends MarshalVersion>(options?: {
+export function initManifestNode<Version extends MarshalVersion = '1.0'>(options?: {
   obfuscationKey?: Bytes<32>
   version?: Version
 }): MantarayNode<Version> {

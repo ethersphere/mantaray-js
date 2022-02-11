@@ -29,7 +29,7 @@ describe('Mantaray 1.0 Unit Tests', () => {
     const node = initManifestNode()
     const randAddress = gen32Bytes()
     const path = new TextEncoder().encode('vmi')
-    node.addFork(path, randAddress)
+    node.addFork(path, { entry: randAddress })
     expect(() => node.serialize()).toThrowError()
   })
 
