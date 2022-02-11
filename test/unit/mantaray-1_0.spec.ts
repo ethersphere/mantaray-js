@@ -33,6 +33,13 @@ describe('Mantaray 1.0 Unit Tests', () => {
     expect(() => node.serialize()).toThrowError()
   })
 
+  it('should throw error if no random key generator function was passed when obfuscation key defined', () => {
+    const node = initManifestNode({ version: '1.0' })
+    node.obfuscationKey = gen32Bytes()
+    const path = new TextEncoder().encode('vmi')
+    expect(() => node.addFork(path)).toThrowError(/^Obfuscation key generator is not passed/)
+  })
+
   it('tests expected node attributes one-by-one', () => {
     const sampleNode = getSampleMantarayNode1_0()
     const node = sampleNode.node
