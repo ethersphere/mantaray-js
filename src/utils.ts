@@ -75,6 +75,10 @@ export function findIndexOfArray(element: Uint8Array, searchFor: Uint8Array): nu
  * @returns whether the element starts with the given prefix or not.
  */
 export function isPrefixedBy(element: Uint8Array, prefix: Uint8Array): boolean {
+  if (element.length < prefix.length) {
+    return false
+  }
+
   for (let i = 0; i < prefix.length; i++) {
     if (element[i] !== prefix[i]) return false
   }
