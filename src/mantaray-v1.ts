@@ -528,12 +528,11 @@ export class MantarayNode {
     const forkSerializations: Uint8Array[] = []
 
     if (this._isEdge) {
-      const autoForkMetadataSize = true
       const index = new IndexBytes()
       for (const [forkIndex, fork] of Object.entries(this.forks)) {
         index.setByte(Number(forkIndex))
 
-        if (autoForkMetadataSize && fork.node.forkMetadata) {
+        if (fork.node.forkMetadata) {
           // maximum selection among forkMetadata
           const metadataBytes = serializeMedata(fork.node.forkMetadata)
           const forkMetadataSegmentSize = Math.ceil(metadataBytes.length / 32)
