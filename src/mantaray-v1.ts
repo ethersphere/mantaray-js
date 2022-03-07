@@ -25,7 +25,7 @@ import {
 type ForkMapping = { [key: number]: MantarayFork }
 type RecursiveSaveReturnType = { reference: Reference; changed: boolean }
 
-const nodeForkSizes = {
+const NODE_FORK_SIZES = {
   prefixLength: 1,
   /** Bytes length before `reference` */
   preReference: 32,
@@ -33,13 +33,13 @@ const nodeForkSizes = {
   // Mantaray reference is either 32 or 64 bytes long
 } as const
 
-const nodeHeaderSizes = {
+const NODE_HEADER_SIZES = {
   obfuscationKey: 32,
   versionHash: 31,
   /** 3 bit flags + 5 bit forkMetadataSegmentSize */
   nodeFeatures: 1,
-  full: (): number => {
-    return nodeHeaderSizes.obfuscationKey + nodeHeaderSizes.versionHash + nodeHeaderSizes.nodeFeatures
+  get full(): number {
+    return NODE_HEADER_SIZES.obfuscationKey + NODE_HEADER_SIZES.versionHash + NODE_HEADER_SIZES.nodeFeatures
   },
   // entry is either 32 or 64 bytes long
 } as const
@@ -99,7 +99,7 @@ export class MantarayFork {
       prefixLengthBytes[0] += 1 // continuous node rule
     }
 
-    const prefixBytes = new Uint8Array(nodeForkSizes.prefixMax)
+    const prefixBytes = new Uint8Array(NODE_FORK_SIZES.prefixMax)
     prefixBytes.set(this.prefix)
 
     const mantarayReference: Reference | undefined = this.node.contentAddress
@@ -121,21 +121,21 @@ export class MantarayFork {
     let prefixLength = data[0]
     let continuousNode = false
 
-    if (prefixLength > nodeForkSizes.prefixMax) {
+    if (prefixLength > NODE_FORK_SIZES.prefixMax) {
       prefixLength = 31
       continuousNode = true
     }
 
-    const prefix = data.slice(nodeForkSizes.prefixLength, nodeForkSizes.prefixLength + prefixLength)
+    const prefix = data.slice(NODE_FORK_SIZES.prefixLength, NODE_FORK_SIZES.prefixLength + prefixLength)
     const node = new MantarayNode()
     node.isContinuousNode = continuousNode
     const fork = new MantarayFork(prefix, node)
     const entryLength = encEntry ? 64 : 32
     // on deserialisation the content address stores the fork's mantaray node address
-    const contentAddress = data.slice(nodeForkSizes.preReference, nodeForkSizes.preReference + entryLength) as
+    const contentAddress = data.slice(NODE_FORK_SIZES.preReference, NODE_FORK_SIZES.preReference + entryLength) as
       | Bytes<32>
       | Bytes<64>
-    const metadataBytes = data.slice(nodeForkSizes.preReference + entryLength)
+    const metadataBytes = data.slice(NODE_FORK_SIZES.preReference + entryLength)
 
     if (metadataBytes.length > 0) {
       node.forkMetadata = deserializeMetadata(metadataBytes)
@@ -162,15 +162,16 @@ export class MantarayNode {
   private _entry?: Reference
   private _nodeMetadata?: MetadataMapping
   /**
-   * metadata about the node sersialised on the fork level.
-   * handled here, because of trie structure rearrangements on `addFork`
+   * Metadata about the node sersialized on its parent level.
+   *
+   * It is handled here instead of `MantarayFork`, because of trie structure rearrangements on `addFork`
    */
   private _forkMetadata?: MetadataMapping
   /** this value * the segment size (32) gives the reserved bytesize for metadata under each forkdata */
   private _forkMetadataSegmentSize: number
   /**
-   * whether the node act as a continuous node because the childnode prefix is too long
-   * information requires parent node fetch
+   * Prefix is limited to 31 bytes. When it overflows a new `MantarayNode` is created to store the overflowing prefix.
+   * This new mantaray node will act as a continuous node because the childnode prefix is too long
    */
   public isContinuousNode: boolean
   /** Forks of the manifest. */
@@ -301,8 +302,6 @@ export class MantarayNode {
     return Boolean(this._forkMetadata) || Boolean(this._nodeMetadata)
   }
 
-  /// BL methods
-
   public addFork(
     path: Uint8Array,
     attributes?: {
@@ -317,6 +316,7 @@ export class MantarayNode {
     const forkMetadata: MetadataMapping | undefined = attributes?.forkMetadata
     const obfuscationKeyGenerator: Random32BytesFn | undefined = attributes?.obfuscationKeyGenerator
 
+    // refers to the root node of the trie
     if (path.length === 0) {
       if (entry) this.entry = entry
 
@@ -343,9 +343,9 @@ export class MantarayNode {
       }
 
       // Continuous node
-      if (path.length > nodeForkSizes.prefixMax) {
-        const prefix = path.slice(0, nodeForkSizes.prefixMax)
-        const rest = path.slice(nodeForkSizes.prefixMax)
+      if (path.length > NODE_FORK_SIZES.prefixMax) {
+        const prefix = path.slice(0, NODE_FORK_SIZES.prefixMax)
+        const rest = path.slice(NODE_FORK_SIZES.prefixMax)
         newNode.addFork(rest, attributes)
         newNode.isContinuousNode = true
         this.forks[path[0]] = new MantarayFork(prefix, newNode)
@@ -548,8 +548,7 @@ export class MantarayNode {
     let nodeMetadataBytes = new Uint8Array(0)
 
     if (this._nodeMetadata) {
-      const jsonString = JSON.stringify(this._nodeMetadata)
-      nodeMetadataBytes = new TextEncoder().encode(jsonString)
+      nodeMetadataBytes = serializeMedata(this._nodeMetadata)
     }
 
     const bytes = new Uint8Array([
@@ -571,24 +570,24 @@ export class MantarayNode {
 
   public deserialize(data: Uint8Array): void {
     /// Header
-    const nodeHeaderSize = nodeHeaderSizes.full()
+    const fullNodeHeaderSize = NODE_HEADER_SIZES.full
 
-    if (data.length < nodeHeaderSize) throw Error('The serialised input is too short')
+    if (data.length < fullNodeHeaderSize) throw Error('The serialised input is too short')
 
-    this._obfuscationKey = new Uint8Array(data.slice(0, nodeHeaderSizes.obfuscationKey)) as Bytes<32>
+    this._obfuscationKey = new Uint8Array(data.slice(0, NODE_HEADER_SIZES.obfuscationKey)) as Bytes<32>
     // perform XOR decryption on bytes after obfuscation key
     encryptDecrypt(this._obfuscationKey, data, this._obfuscationKey.length)
 
     const versionHash = data.slice(
-      nodeHeaderSizes.obfuscationKey,
-      nodeHeaderSizes.obfuscationKey + nodeHeaderSizes.versionHash,
+      NODE_HEADER_SIZES.obfuscationKey,
+      NODE_HEADER_SIZES.obfuscationKey + NODE_HEADER_SIZES.versionHash,
     )
 
     if (!equalBytes(versionHash, serializeVersion('1.0'))) {
       throw new Error('The data is not Mantaray 1.0')
     }
 
-    const nodeFeaturesByte = data[nodeHeaderSize - 1]
+    const nodeFeaturesByte = data[fullNodeHeaderSize - 1]
     this.deserializeFeatures(nodeFeaturesByte)
 
     /// Entry
@@ -600,9 +599,9 @@ export class MantarayNode {
       } else {
         refBytesSize = 32
       }
-      this.entry = data.slice(nodeHeaderSize, nodeHeaderSize + refBytesSize) as Reference
+      this.entry = data.slice(fullNodeHeaderSize, fullNodeHeaderSize + refBytesSize) as Reference
     }
-    let offset = nodeHeaderSize + refBytesSize
+    let offset = fullNodeHeaderSize + refBytesSize
 
     /// Fork
     if (this._isEdge) {
@@ -614,7 +613,7 @@ export class MantarayNode {
 
       /// Forks
       this.forks = {}
-      const forkSize = nodeForkSizes.preReference + (this._encEntry ? 64 : 32) + this._forkMetadataSegmentSize * 32
+      const forkSize = NODE_FORK_SIZES.preReference + (this._encEntry ? 64 : 32) + this._forkMetadataSegmentSize * 32
       indexForks.forEach(byte => {
         if (data.length < offset + forkSize) {
           throw Error(`There is not enough size to read fork data at offset ${offset}`)
@@ -633,12 +632,7 @@ export class MantarayNode {
     const metadataBytes = data.slice(offset)
 
     if (metadataBytes.length > 0) {
-      const jsonString = new TextDecoder().decode(metadataBytes)
-      try {
-        this._nodeMetadata = JSON.parse(jsonString)
-      } catch (e) {
-        throw new Error(`The byte array is not a valid JSON object in the Mantaray object`)
-      }
+      this._nodeMetadata = deserializeMetadata(metadataBytes)
     }
   }
 

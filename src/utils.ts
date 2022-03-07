@@ -222,7 +222,13 @@ export function serializeMetadataInSegment(metadata: MetadataMapping | undefined
   const jsonData = new TextEncoder().encode(jsonString)
   const remainingSegmentBytes = segmentSize * 32 - jsonData.length
 
-  if (remainingSegmentBytes < 0) throw new Error('segmentSize for fork metadata is smaller than the jsonData')
+  if (remainingSegmentBytes < 0) {
+    throw new Error(
+      `serialized metadata does not fit into the reserved byte size for forkMetadata (metadata size ${
+        jsonData.length
+      } > reserved metadata size ${segmentSize * 32})`,
+    )
+  }
 
   const paddingBytes = new Uint8Array(remainingSegmentBytes)
   paddingBytes.fill(32) // space padding
