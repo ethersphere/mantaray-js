@@ -8,13 +8,33 @@ export const { hexToBytes } = Utils.Hex
 /** only for comparisation. For assigment always create new uint8array! */
 export const null32Bytes = new Uint8Array(32)
 
-export function checkReference(ref: Reference): void | never {
+export function assertReference(ref: unknown): asserts ref is Reference {
   if (!(ref instanceof Uint8Array)) {
     throw new Error('Given referennce is not an Uint8Array instance.')
   }
 
   if (ref.length !== 32 && ref.length !== 64) {
     throw new Error(`Wrong reference length. Entry only can be 32 or 64 length in bytes`)
+  }
+}
+
+function isMetadataMapping(metadata: unknown): metadata is MetadataMapping {
+  return typeof metadata === 'object' && !Array.isArray(metadata)
+}
+
+export function assertMetadataMapping(metadata: unknown): asserts metadata is MetadataMapping {
+  if (!isMetadataMapping(metadata)) {
+    throw new Error('given metadata is not a valid metadata object for Mantaray serialisation')
+  }
+}
+
+function isNonNegativeInteger(value: unknown): value is number {
+  return typeof value === 'number' && value >= 0 && Number.isInteger(value)
+}
+
+export function assertNonNegativeInteger(value: unknown): asserts value is number {
+  if (!isNonNegativeInteger(value)) {
+    throw new Error(`Given value ${value} is not a non negative integer`)
   }
 }
 

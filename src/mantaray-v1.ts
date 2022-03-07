@@ -8,7 +8,9 @@ import type {
   StorageSaver,
 } from './types'
 import {
-  checkReference,
+  assertMetadataMapping,
+  assertNonNegativeInteger,
+  assertReference,
   common,
   deserializeMetadata,
   encryptDecrypt,
@@ -194,7 +196,7 @@ export class MantarayNode {
 
       return
     }
-    checkReference(contentAddress)
+    assertReference(contentAddress)
 
     this._contentAddress = contentAddress
   }
@@ -209,7 +211,7 @@ export class MantarayNode {
 
       return
     }
-    checkReference(entry)
+    assertReference(entry)
 
     this._entry = entry
     this._hasEntry = true
@@ -240,6 +242,12 @@ export class MantarayNode {
   }
 
   public set nodeMetadata(metadata: MetadataMapping | undefined) {
+    if (!metadata) {
+      this._nodeMetadata = undefined
+
+      return
+    }
+    assertMetadataMapping(metadata)
     this._nodeMetadata = metadata
     this.makeDirty()
   }
@@ -249,6 +257,12 @@ export class MantarayNode {
   }
 
   public set forkMetadata(metadata: MetadataMapping | undefined) {
+    if (!metadata) {
+      this._nodeMetadata = undefined
+
+      return
+    }
+    assertMetadataMapping(metadata)
     this._forkMetadata = metadata
     this.makeDirty()
   }
@@ -258,6 +272,8 @@ export class MantarayNode {
   }
 
   public set forkMetadataSegmentSize(value: number) {
+    assertNonNegativeInteger(value)
+
     if (value > 31) throw new Error(`forkMetadataSegmentSize is greater than 31. Got: ${value}`)
     this._forkMetadataSegmentSize = value
   }

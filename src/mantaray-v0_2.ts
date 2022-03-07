@@ -1,6 +1,6 @@
 import { Bytes, MarshalVersion, MetadataMapping, NodeType, Reference, StorageLoader, StorageSaver } from './types'
 import {
-  checkReference,
+  assertReference,
   common,
   encryptDecrypt,
   equalBytes,
@@ -170,13 +170,13 @@ export class MantarayNode {
   /// Setters/getters
 
   public set setContentAddress(contentAddress: Reference) {
-    checkReference(contentAddress)
+    assertReference(contentAddress)
 
     this.contentAddress = contentAddress
   }
 
   public set setEntry(entry: Reference) {
-    checkReference(entry)
+    assertReference(entry)
 
     this.entry = entry
 
