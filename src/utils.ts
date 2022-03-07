@@ -47,13 +47,12 @@ export function checkBytes<Length extends number>(bytes: unknown, length: number
 }
 
 /**
- * Finds starting index `searchFor` in `element` Uin8Arrays
+ * Gives back on which index of `element` starts the `searchFor` Uint8Array.
+ * `searchFor` element has to be included in `element`, otherwise it returns -1
  *
- * If `searchFor` is not found in `element` it returns -1
- *
- * @param element
- * @param searchFor
- * @returns starting index of `searchFor` in `element`
+ * @param element The byte array in which the function will search for `searchFor` :)
+ * @param searchFor The byte array that `element` should include.
+ * @returns the index of `element` where `searchFor` starts.
  */
 export function findIndexOfArray(element: Uint8Array, searchFor: Uint8Array): number {
   for (let i = 0; i <= element.length - searchFor.length; i++) {
@@ -66,6 +65,21 @@ export function findIndexOfArray(element: Uint8Array, searchFor: Uint8Array): nu
   }
 
   return -1
+}
+
+/**
+ * Checks whether element is prefixed by the 2nd byte array parameter.
+ *
+ * @param element The byte array in which the function will search for prefix
+ * @param prefix The byte array that `element` should start with.
+ * @returns whether the element starts with the given prefix or not.
+ */
+export function isPrefixedBy(element: Uint8Array, prefix: Uint8Array): boolean {
+  for (let i = 0; i < prefix.length; i++) {
+    if (element[i] !== prefix[i]) return false
+  }
+
+  return true
 }
 
 /** Overwrites `a` bytearrays elements with elements of `b` starts from `i` */

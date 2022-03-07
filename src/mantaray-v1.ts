@@ -18,6 +18,7 @@ import {
   findIndexOfArray,
   flattenBytesArray,
   IndexBytes,
+  isPrefixedBy,
   null32Bytes,
   serializeMedata,
   serializeMetadataInSegment,
@@ -441,9 +442,7 @@ export class MantarayNode {
 
     if (!fork) throw new NotFoundError(path)
 
-    const prefixIndex = findIndexOfArray(path, fork.prefix)
-
-    if (prefixIndex === -1) throw new NotFoundError(path, fork.prefix)
+    if (!isPrefixedBy(path, fork.prefix)) throw new NotFoundError(path, fork.prefix)
 
     const rest = path.slice(fork.prefix.length)
 
@@ -468,7 +467,7 @@ export class MantarayNode {
 
     const prefixIndex = findIndexOfArray(path, fork.prefix)
 
-    if (prefixIndex === -1) throw new NotFoundError(path, fork.prefix)
+    if (prefixIndex === -1 || prefixIndex !== 0) throw new NotFoundError(path, fork.prefix)
 
     const rest = path.slice(fork.prefix.length)
 
