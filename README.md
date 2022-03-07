@@ -116,20 +116,13 @@ The following describes the format of a node binary format.
 │     prefixLength <1 byte>     │        prefix <31 byte>      │
 ├───────────────────────────────┴──────────────────────────────┤
 │                   reference <32/64 byte>                     │
-└──────────────────────────────────────────────────────────────┘
-```
-
-### Fork with metadata
-
-```
-┌───────────────────────────────┬──────────────────────────────┐
-│     prefixLength <1 byte>     │        prefix <31 byte>      │
-├───────────────────────────────┴──────────────────────────────┤
-│                   reference <32/64 byte>                     │
 ├──────────────────────────────────────────────────────────────┤
 │        forkMetadata <forkMetadataSegmentSize * 32 byte>      │
 └──────────────────────────────────────────────────────────────┘
 ```
+
+If `forkMetadataSegmentSize` is 0, then `forkMetadata` is omitted.
+`forkMetadata` has the same length for each fork under one Mantaray node. 
 
 # Testing
 
