@@ -512,12 +512,12 @@ export class MantarayNode {
     /// Forks
     const forkSerializations: Uint8Array[] = []
 
-    index.forEach(byte => {
+    for (const byte of index.forEach()) {
       const fork = this.forks![byte]
 
       if (!fork) throw Error(`Fork indexing error: fork has not found under ${byte} index`)
       forkSerializations.push(fork.serialize())
-    })
+    }
 
     const bytes = new Uint8Array([
       ...this.obfuscationKey!,
@@ -574,7 +574,7 @@ export class MantarayNode {
       indexForks.setBytes = indexBytes
       offset += 32
 
-      indexForks.forEach(byte => {
+      for (const byte of indexForks.forEach()) {
         let fork: MantarayFork
 
         if (data.length < offset + nodeForkSizes.nodeType) {
@@ -608,7 +608,7 @@ export class MantarayNode {
         this.forks![byte] = fork
 
         offset += nodeForkSize
-      })
+      }
     } else {
       throw Error('Wrong mantaray version')
     }

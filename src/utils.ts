@@ -221,10 +221,10 @@ export class IndexBytes {
   }
 
   /** Iterates through on the indexed byte values */
-  public forEach(hook: (byte: number) => void): void {
+  public *forEach(): Generator<number, void> {
     for (let i = 0; i <= 255; i++) {
       if (this.checkBytePresent(i)) {
-        hook(i)
+        yield i
       }
     }
   }

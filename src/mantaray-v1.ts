@@ -554,12 +554,12 @@ export class MantarayNode {
       indexBytes = index.getBytes
 
       /// Forks
-      index.forEach(byte => {
+      for (const byte of index.forEach()) {
         const fork = this.forks![byte]
 
         if (!fork) throw Error(`Fork indexing error: fork has not found under ${byte} index`)
         forkSerializations.push(fork.serialize(this.forkMetadataSegmentSize))
-      })
+      }
     }
 
     const nodeFeatures: Bytes<1> = this.serializeFeatures()
@@ -634,7 +634,7 @@ export class MantarayNode {
       /// Forks
       this.forks = {}
       const forkSize = NODE_FORK_SIZES.preReference + (this._encEntry ? 64 : 32) + this._forkMetadataSegmentSize * 32
-      indexForks.forEach(byte => {
+      for (const byte of indexForks.forEach()) {
         if (data.length < offset + forkSize) {
           throw Error(`There is not enough size to read fork data at offset ${offset}`)
         }
@@ -645,7 +645,7 @@ export class MantarayNode {
         this.forks![byte] = fork
 
         offset += forkSize
-      })
+      }
     }
 
     /// NodeMetadata
