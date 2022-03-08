@@ -46,6 +46,9 @@ const NODE_HEADER_SIZES = {
   // entry is either 32 or 64 bytes long
 } as const
 
+/** Maximum segmentbyte size for fork metadata */
+const MAX_FORK_METADATA_SEGMENT_SIZE = 2 ^ 5
+
 /// ERRORS
 
 class NotFoundError extends Error {
@@ -536,6 +539,12 @@ export class MantarayNode {
           // maximum selection among forkMetadata
           const metadataBytes = serializeMedata(fork.node.forkMetadata)
           const forkMetadataSegmentSize = Math.ceil(metadataBytes.length / 32)
+
+          if (forkMetadataSegmentSize > MAX_FORK_METADATA_SEGMENT_SIZE) {
+            throw new Error(
+              `metadata size ${forkMetadataSegmentSize} is bigger than the limit ${MAX_FORK_METADATA_SEGMENT_SIZE}.`,
+            )
+          }
 
           if (forkMetadataSegmentSize > this.forkMetadataSegmentSize) {
             this.forkMetadataSegmentSize = forkMetadataSegmentSize
