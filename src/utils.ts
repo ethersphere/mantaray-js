@@ -1,15 +1,40 @@
-import getRandomValues from 'get-random-values'
 import type { Message } from 'js-sha3'
 import { keccak256 } from 'js-sha3'
-import { Bytes, Reference } from './types'
+import { Bytes, MarshalVersion, MetadataMapping, Reference } from './types'
+import { Utils } from '@ethersphere/bee-js'
 
-export function checkReference(ref: Reference): void | never {
+export const { hexToBytes } = Utils.Hex
+
+/** only for comparisation. For assigment always create new uint8array! */
+export const null32Bytes = new Uint8Array(32)
+
+export function assertReference(ref: unknown): asserts ref is Reference {
   if (!(ref instanceof Uint8Array)) {
     throw new Error('Given referennce is not an Uint8Array instance.')
   }
 
   if (ref.length !== 32 && ref.length !== 64) {
     throw new Error(`Wrong reference length. Entry only can be 32 or 64 length in bytes`)
+  }
+}
+
+function isMetadataMapping(metadata: unknown): metadata is MetadataMapping {
+  return typeof metadata === 'object' && !Array.isArray(metadata)
+}
+
+export function assertMetadataMapping(metadata: unknown): asserts metadata is MetadataMapping {
+  if (!isMetadataMapping(metadata)) {
+    throw new Error('given metadata is not a valid metadata object for Mantaray serialisation')
+  }
+}
+
+function isNonNegativeInteger(value: unknown): value is number {
+  return typeof value === 'number' && value >= 0 && Number.isInteger(value)
+}
+
+export function assertNonNegativeInteger(value: unknown): asserts value is number {
+  if (!isNonNegativeInteger(value)) {
+    throw new Error(`Given value ${value} is not a non negative integer`)
   }
 }
 
@@ -22,13 +47,12 @@ export function checkBytes<Length extends number>(bytes: unknown, length: number
 }
 
 /**
- * Finds starting index `searchFor` in `element` Uin8Arrays
+ * Gives back on which index of `element` starts the `searchFor` Uint8Array.
+ * `searchFor` element has to be included in `element`, otherwise it returns -1
  *
- * If `searchFor` is not found in `element` it returns -1
- *
- * @param element
- * @param searchFor
- * @returns starting index of `searchFor` in `element`
+ * @param element The byte array in which the function will search for `searchFor` :)
+ * @param searchFor The byte array that `element` should include.
+ * @returns the index of `element` where `searchFor` starts.
  */
 export function findIndexOfArray(element: Uint8Array, searchFor: Uint8Array): number {
   for (let i = 0; i <= element.length - searchFor.length; i++) {
@@ -41,6 +65,25 @@ export function findIndexOfArray(element: Uint8Array, searchFor: Uint8Array): nu
   }
 
   return -1
+}
+
+/**
+ * Checks whether element is prefixed by the 2nd byte array parameter.
+ *
+ * @param element The byte array in which the function will search for prefix
+ * @param prefix The byte array that `element` should start with.
+ * @returns whether the element starts with the given prefix or not.
+ */
+export function isPrefixedBy(element: Uint8Array, prefix: Uint8Array): boolean {
+  if (element.length < prefix.length) {
+    return false
+  }
+
+  for (let i = 0; i < prefix.length; i++) {
+    if (element[i] !== prefix[i]) return false
+  }
+
+  return true
 }
 
 /** Overwrites `a` bytearrays elements with elements of `b` starts from `i` */
@@ -131,12 +174,6 @@ export function toBigEndianFromUint16(value: number): Bytes<2> {
   return new Uint8Array([value >> 8, value]) as Bytes<2>
 }
 
-export function gen32Bytes(): Bytes<32> {
-  const bytes = new Uint8Array(32)
-
-  return getRandomValues(bytes) as Bytes<32>
-}
-
 /** It returns the common bytes of the two given byte arrays until the first byte difference */
 export function common(a: Uint8Array, b: Uint8Array): Uint8Array {
   let c = new Uint8Array(0)
@@ -184,11 +221,66 @@ export class IndexBytes {
   }
 
   /** Iterates through on the indexed byte values */
-  public forEach(hook: (byte: number) => void): void {
+  public *forEach(): Generator<number, void> {
     for (let i = 0; i <= 255; i++) {
       if (this.checkBytePresent(i)) {
-        hook(i)
+        yield i
       }
     }
+  }
+}
+
+/**
+ * The hash length has to be 31 instead of 32 that comes from the keccak hash function
+ */
+export function serializeVersion(version: MarshalVersion): Bytes<31> {
+  const versionName = 'mantaray'
+  const versionSeparator = ':'
+  const hashBytes = keccak256Hash(versionName + versionSeparator + version)
+
+  return hashBytes.slice(0, 31) as Bytes<31>
+}
+
+export function serializeMedata(metadata: MetadataMapping): Uint8Array {
+  const jsonString = JSON.stringify(metadata)
+
+  return new TextEncoder().encode(jsonString)
+}
+
+/** Returns segment padded stringified JSON byte array */
+export function serializeMetadataInSegment(metadata: MetadataMapping | undefined, segmentSize: number): Uint8Array {
+  if (!metadata) {
+    const bytes = new Uint8Array(segmentSize * 32)
+    bytes.fill(32) // space padding
+
+    return bytes
+  }
+
+  const jsonString = JSON.stringify(metadata)
+  const jsonData = new TextEncoder().encode(jsonString)
+  const remainingSegmentBytes = segmentSize * 32 - jsonData.length
+
+  if (remainingSegmentBytes < 0) {
+    throw new Error(
+      `serialized metadata does not fit into the reserved byte size for forkMetadata (metadata size ${
+        jsonData.length
+      } > reserved metadata size ${segmentSize * 32})`,
+    )
+  }
+
+  const paddingBytes = new Uint8Array(remainingSegmentBytes)
+  paddingBytes.fill(32) // space padding
+
+  return new Uint8Array([...jsonData, ...paddingBytes])
+}
+
+/** If the JSON deserialisation of the data is not succesful, it will give back undefined  */
+export function deserializeMetadata(data: Uint8Array): MetadataMapping | undefined {
+  try {
+    const jsonString = new TextDecoder().decode(data).trimEnd()
+
+    return JSON.parse(jsonString)
+  } catch (e) {
+    return undefined
   }
 }

@@ -1,4 +1,4 @@
-export const marshalVersionValues = ['0.1', '0.2'] as const
+export const marshalVersionValues = ['0.1', '0.2', '1.0'] as const
 
 export type MarshalVersion = typeof marshalVersionValues[number]
 
@@ -16,7 +16,7 @@ export enum NodeType {
   mask = 255,
 }
 
-export type MetadataMapping = { [key: string]: string }
+export type MetadataMapping = { [key: string]: any }
 
 export type StorageLoader = (reference: Reference) => Promise<Uint8Array>
 
@@ -26,3 +26,5 @@ export type StorageHandler = {
   load: StorageLoader
   save: StorageSaver
 }
+
+export type Random32BytesFn = () => Bytes<32>

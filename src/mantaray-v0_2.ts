@@ -1,6 +1,6 @@
 import { Bytes, MarshalVersion, MetadataMapping, NodeType, Reference, StorageLoader, StorageSaver } from './types'
 import {
-  checkReference,
+  assertReference,
   common,
   encryptDecrypt,
   equalBytes,
@@ -8,7 +8,7 @@ import {
   flattenBytesArray,
   fromBigEndian,
   IndexBytes,
-  keccak256Hash,
+  serializeVersion,
   toBigEndianFromUint16,
 } from './utils'
 
@@ -170,13 +170,13 @@ export class MantarayNode {
   /// Setters/getters
 
   public set setContentAddress(contentAddress: Reference) {
-    checkReference(contentAddress)
+    assertReference(contentAddress)
 
     this.contentAddress = contentAddress
   }
 
   public set setEntry(entry: Reference) {
-    checkReference(entry)
+    assertReference(entry)
 
     this.entry = entry
 
@@ -512,12 +512,12 @@ export class MantarayNode {
     /// Forks
     const forkSerializations: Uint8Array[] = []
 
-    index.forEach(byte => {
+    for (const byte of index.forEach()) {
       const fork = this.forks![byte]
 
       if (!fork) throw Error(`Fork indexing error: fork has not found under ${byte} index`)
       forkSerializations.push(fork.serialize())
-    })
+    }
 
     const bytes = new Uint8Array([
       ...this.obfuscationKey!,
@@ -574,7 +574,7 @@ export class MantarayNode {
       indexForks.setBytes = indexBytes
       offset += 32
 
-      indexForks.forEach(byte => {
+      for (const byte of indexForks.forEach()) {
         let fork: MantarayFork
 
         if (data.length < offset + nodeForkSizes.nodeType) {
@@ -608,7 +608,7 @@ export class MantarayNode {
         this.forks![byte] = fork
 
         offset += nodeForkSize
-      })
+      }
     } else {
       throw Error('Wrong mantaray version')
     }
@@ -653,17 +653,6 @@ export function checkForSeparator(node: MantarayNode): boolean {
   }
 
   return false
-}
-
-/**
- * The hash length has to be 31 instead of 32 that comes from the keccak hash function
- */
-function serializeVersion(version: MarshalVersion): Bytes<31> {
-  const versionName = 'mantaray'
-  const versionSeparator = ':'
-  const hashBytes = keccak256Hash(versionName + versionSeparator + version)
-
-  return hashBytes.slice(0, 31) as Bytes<31>
 }
 
 function serializeReferenceLength(entry: Reference): Bytes<1> {
