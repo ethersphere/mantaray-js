@@ -14,6 +14,7 @@ import {
 
 const PATH_SEPARATOR = '/'
 const PATH_SEPARATOR_BYTE = 47
+const PADDING_BYTE = 0x0a
 
 type ForkMapping = { [key: number]: MantarayFork }
 type RecursiveSaveReturnType = { reference: Reference; changed: boolean }
@@ -99,10 +100,24 @@ export class MantarayFork {
       const metadataBytes = new TextEncoder().encode(jsonString)
 
       // pad JSON bytes if necessary -> the encryptDecrypt handles if the data has no key length
+      let padding = new Uint8Array(0)
+      if (metadataBytes.length < nodeHeaderSizes.obfuscationKey) {
+        const paddingLength = nodeHeaderSizes.obfuscationKey - metadataBytes.length
+        padding = new Uint8Array(paddingLength)
+        for (let i = 0; i < padding.length; i++) {
+          padding[i] = PADDING_BYTE
+        }
+      } else if (metadataBytes.length > nodeHeaderSizes.obfuscationKey) {
+        const paddingLength = nodeHeaderSizes.obfuscationKey - metadataBytes.length%nodeHeaderSizes.obfuscationKey
+        padding = new Uint8Array(paddingLength)
+        for (let i = 0; i < padding.length; i++) {
+          padding[i] = PADDING_BYTE
+        }
+      }
 
-      const metadataBytesSize = toBigEndianFromUint16(metadataBytes.length)
+      const metadataBytesSize = toBigEndianFromUint16(metadataBytes.length + padding.length)
 
-      return new Uint8Array([...data, ...metadataBytesSize, ...metadataBytes])
+      return new Uint8Array([...data, ...metadataBytesSize, ...metadataBytes, ...padding])
     }
 
     return data
