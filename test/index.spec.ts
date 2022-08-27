@@ -70,7 +70,7 @@ it('should construct manifests of testpage folder', async () => {
     Filename: 'index.html',
   })
   iNode.addFork(utf8ToBytes('img/icon.png.txt'), hexToBytes(textReference), {
-    'Content-Type': '', // FIXME: The bee node assigns empty string to Content Type in this case
+    'Content-Type': 'text/plain; charset=utf-8',
     Filename: 'icon.png.txt',
   })
   iNode.addFork(utf8ToBytes('img/icon.png'), hexToBytes(imageReference), {
