@@ -34,6 +34,44 @@ const beeTestPageManifestData = async (): Promise<Uint8Array> => {
   return bee.downloadData(contentHash) //only download its manifest
 }
 
+it('should generate the same content hash as Bee', async () => {
+  const contentHash = await bee.uploadFilesFromDirectory(process.env.BEE_POSTAGE, join(__dirname, 'testpage'), {
+    pin: true,
+    indexDocument: 'index.html',
+  })
+  const testPage = join(__dirname, 'testpage')
+  const indexHtmlBytes = FS.readFileSync(join(testPage, 'index.html'))
+  const imageBytes = FS.readFileSync(join(testPage, 'img', 'icon.png'))
+  const textBytes = FS.readFileSync(join(testPage, 'img', 'icon.png.txt'))
+  const [indexReference, imageReference, textReference] = await Promise.all([
+    bee.uploadData(process.env.BEE_POSTAGE, indexHtmlBytes),
+    bee.uploadData(process.env.BEE_POSTAGE, imageBytes),
+    bee.uploadData(process.env.BEE_POSTAGE, textBytes),
+  ])
+  const utf8ToBytes = (value: string): Uint8Array => {
+    return new TextEncoder().encode(value)
+  }
+  const iNode = new MantarayNode()
+  iNode.addFork(utf8ToBytes('index.html'), hexToBytes(indexReference), {
+    'Content-Type': 'text/html; charset=utf-8',
+    Filename: 'index.html',
+  })
+  iNode.addFork(utf8ToBytes('img/icon.png.txt'), hexToBytes(textReference), {
+    'Content-Type': 'text/plain; charset=utf-8',
+    Filename: 'icon.png.txt',
+  })
+  iNode.addFork(utf8ToBytes('img/icon.png'), hexToBytes(imageReference), {
+    'Content-Type': 'image/png',
+    Filename: 'icon.png',
+  })
+  iNode.addFork(utf8ToBytes('/'), new Uint8Array(32) as Reference, {
+    'website-index-document': 'index.html',
+  })
+  const iNodeRef = await iNode.save(saveFunction)
+
+  expect(iNodeRef).toEqual(hexToBytes(contentHash))
+})
+
 it('should serialize/deserialize the same as Bee', async () => {
   const data = await beeTestPageManifestData()
   const node = new MantarayNode()
