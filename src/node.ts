@@ -99,9 +99,9 @@ export class MantarayFork {
       const jsonString = JSON.stringify(this.node.getMetadata)
       const metadataBytes = new TextEncoder().encode(jsonString)
 
-      // pad JSON bytes if necessary -> the encryptDecrypt handles if the data has no key length
       const metadataSizeWithSize = metadataBytes.length + nodeForkSizes.metadata
       let padding = new Uint8Array(0)
+
       if (metadataSizeWithSize < nodeHeaderSizes.obfuscationKey) {
         const paddingLength = nodeHeaderSizes.obfuscationKey - metadataSizeWithSize
         padding = new Uint8Array(paddingLength)
@@ -109,7 +109,7 @@ export class MantarayFork {
           padding[i] = PADDING_BYTE
         }
       } else if (metadataSizeWithSize > nodeHeaderSizes.obfuscationKey) {
-        const paddingLength = nodeHeaderSizes.obfuscationKey - metadataSizeWithSize%nodeHeaderSizes.obfuscationKey
+        const paddingLength = nodeHeaderSizes.obfuscationKey - (metadataSizeWithSize % nodeHeaderSizes.obfuscationKey)
         padding = new Uint8Array(paddingLength)
         for (let i = 0; i < padding.length; i++) {
           padding[i] = PADDING_BYTE

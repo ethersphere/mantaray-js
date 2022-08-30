@@ -24,7 +24,8 @@
   "license": "BSD-3-Clause",
   "dependencies": {
     "get-random-values": "^1.2.2",
-    "js-sha3": "^0.8.0"
+    "js-sha3": "^0.8.0",
+    "prettier": "^2.7.1"
   },
   "devDependencies": {
     "@babel/core": "^7.14.6",
