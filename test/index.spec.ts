@@ -88,7 +88,7 @@ it('should serialize/deserialize the same as Bee', async () => {
   node.deserialize(data)
   await loadAllNodes(loadFunction, node)
   const serialization = node.serialize()
-  expect(serialization).toEqual(data) // -> mantaray-js does not padding the json metadata
+  expect(serialization).toEqual(data)
   const nodeAgain = new MantarayNode()
   nodeAgain.deserialize(serialization)
   await loadAllNodes(loadFunction, nodeAgain)
@@ -118,7 +118,6 @@ it('should construct manifests of testpage folder', async () => {
     Filename: 'index.html',
   })
   iNode.addFork(utf8ToBytes('img/icon.png.txt'), hexToBytes(textReference), {
-    // 'Content-Type': 'text/plain; charset=utf-8',
     'Content-Type': '',
     Filename: 'icon.png.txt',
   })
