@@ -1,5 +1,13 @@
 # Changelog
 
+### [1.0.4](https://www.github.com/ethersphere/mantaray-js/compare/v1.0.3...v1.0.4) (2022-09-22)
+
+
+### Bug Fixes
+
+* metadata padding ([#37](https://www.github.com/ethersphere/mantaray-js/issues/37)) ([3960498](https://www.github.com/ethersphere/mantaray-js/commit/3960498dcb51e75bdf0a1c204d1ef9833bff3c1a))
+* recursive save ([#28](https://www.github.com/ethersphere/mantaray-js/issues/28)) ([b293c04](https://www.github.com/ethersphere/mantaray-js/commit/b293c04c0e8ca0accf60d4ae8b763242d85cc1e2))
+
 ### [1.0.3](https://www.github.com/ethersphere/mantaray-js/compare/v1.0.2...v1.0.3) (2021-10-28)
 
 
