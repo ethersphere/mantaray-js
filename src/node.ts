@@ -14,6 +14,7 @@ import {
 
 const PATH_SEPARATOR = '/'
 const PATH_SEPARATOR_BYTE = 47
+const PADDING_BYTE = 0x0a
 
 type ForkMapping = { [key: number]: MantarayFork }
 type RecursiveSaveReturnType = { reference: Reference; changed: boolean }
@@ -79,6 +80,26 @@ export class MantarayFork {
    */
   constructor(public prefix: Uint8Array, public node: MantarayNode) {}
 
+  private createMetadataPadding(metadataSizeWithSize: number): Uint8Array {
+    let padding = new Uint8Array(0)
+
+    if (metadataSizeWithSize < nodeHeaderSizes.obfuscationKey) {
+      const paddingLength = nodeHeaderSizes.obfuscationKey - metadataSizeWithSize
+      padding = new Uint8Array(paddingLength)
+      for (let i = 0; i < padding.length; i++) {
+        padding[i] = PADDING_BYTE
+      }
+    } else if (metadataSizeWithSize > nodeHeaderSizes.obfuscationKey) {
+      const paddingLength = nodeHeaderSizes.obfuscationKey - (metadataSizeWithSize % nodeHeaderSizes.obfuscationKey)
+      padding = new Uint8Array(paddingLength)
+      for (let i = 0; i < padding.length; i++) {
+        padding[i] = PADDING_BYTE
+      }
+    }
+
+    return padding
+  }
+
   public serialize(): Uint8Array {
     const nodeType = this.node.getType
 
@@ -98,11 +119,12 @@ export class MantarayFork {
       const jsonString = JSON.stringify(this.node.getMetadata)
       const metadataBytes = new TextEncoder().encode(jsonString)
 
-      // pad JSON bytes if necessary -> the encryptDecrypt handles if the data has no key length
+      const metadataSizeWithSize = metadataBytes.length + nodeForkSizes.metadata
+      const padding = this.createMetadataPadding(metadataSizeWithSize)
 
-      const metadataBytesSize = toBigEndianFromUint16(metadataBytes.length)
+      const metadataBytesSize = toBigEndianFromUint16(metadataBytes.length + padding.length)
 
-      return new Uint8Array([...data, ...metadataBytesSize, ...metadataBytes])
+      return new Uint8Array([...data, ...metadataBytesSize, ...metadataBytes, ...padding])
     }
 
     return data
