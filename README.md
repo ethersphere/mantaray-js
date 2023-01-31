@@ -129,6 +129,5 @@ npm run test
 ## Maintainers
 
 - [nugaon](https://github.com/nugaon)
-- [AuHau](https://github.com/AuHau)
 
 See what "Maintainer" means [here](https://github.com/ethersphere/repo-maintainer).
