@@ -1,3 +1,7 @@
+# ⚠️ Deprecation Notice
+
+**This project is no longer maintained.** The `MantarayNode` class has been merged into [bee-js](https://github.com/ethersphere/bee-js) with additional features and fixes. Please use that instead.
+
 # Description
 
 With this package you can manipulate and interpret mantaray data via `MantarayNode` and `MantarayFork` abstractions.
