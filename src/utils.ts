@@ -5,7 +5,7 @@ import { Bytes, Reference } from './types'
 
 export function checkReference(ref: Reference): void | never {
   if (!(ref instanceof Uint8Array)) {
-    throw new Error('Given referennce is not an Uint8Array instance.')
+    throw new Error('Given reference is not an Uint8Array instance.')
   }
 
   if (ref.length !== 32 && ref.length !== 64) {
